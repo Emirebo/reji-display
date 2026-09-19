@@ -244,7 +244,7 @@ namespace RejiDisplay
 
                 if (!string.IsNullOrEmpty(_leftState.DraftLayout.MediaPath))
                 {
-                    LoadImageForCard("LEFT", _leftState, _leftState.DraftLayout.MediaPath, ImgLeftPreview, PanelLeftDropPrompt, TxtLeftMediaPath, TxtLeftError);
+                    LoadMediaForCard("LEFT", _leftState, _leftState.DraftLayout.MediaPath, ImgLeftPreview, MediaLeftPreviewVideo, PanelLeftDropPrompt, TxtLeftMediaPath, TxtLeftError, PanelLeftVideoControls);
                 }
             }
 
@@ -275,7 +275,7 @@ namespace RejiDisplay
 
                 if (!string.IsNullOrEmpty(_rightState.DraftLayout.MediaPath))
                 {
-                    LoadImageForCard("RIGHT", _rightState, _rightState.DraftLayout.MediaPath, ImgRightPreview, PanelRightDropPrompt, TxtRightMediaPath, TxtRightError);
+                    LoadMediaForCard("RIGHT", _rightState, _rightState.DraftLayout.MediaPath, ImgRightPreview, MediaRightPreviewVideo, PanelRightDropPrompt, TxtRightMediaPath, TxtRightError, PanelRightVideoControls);
                 }
             }
         }
@@ -307,6 +307,13 @@ namespace RejiDisplay
                     TxtLeftLedH.Text = state.Calibration.LogicalLedHeight.ToString();
                     TxtLeftVpX.Text = state.Calibration.ViewportX.ToString();
                     TxtLeftVpY.Text = state.Calibration.ViewportY.ToString();
+
+                    bool isVideo = (state.DraftLayout.MediaSource.Type == MediaSourceType.Video);
+                    PanelLeftVideoControls.Visibility = isVideo ? Visibility.Visible : Visibility.Collapsed;
+                    ChkLeftLoop.IsChecked = state.DraftLayout.VideoState.IsLooping;
+                    ChkLeftMute.IsChecked = state.DraftLayout.VideoState.IsMuted;
+                    SliderLeftVolume.Value = state.DraftLayout.VideoState.Volume * 100.0;
+                    TxtLeftVolume.Text = $"{(int)(state.DraftLayout.VideoState.Volume * 100.0)}%";
                 }
                 else
                 {
@@ -330,6 +337,13 @@ namespace RejiDisplay
                     TxtRightLedH.Text = state.Calibration.LogicalLedHeight.ToString();
                     TxtRightVpX.Text = state.Calibration.ViewportX.ToString();
                     TxtRightVpY.Text = state.Calibration.ViewportY.ToString();
+
+                    bool isVideo = (state.DraftLayout.MediaSource.Type == MediaSourceType.Video);
+                    PanelRightVideoControls.Visibility = isVideo ? Visibility.Visible : Visibility.Collapsed;
+                    ChkRightLoop.IsChecked = state.DraftLayout.VideoState.IsLooping;
+                    ChkRightMute.IsChecked = state.DraftLayout.VideoState.IsMuted;
+                    SliderRightVolume.Value = state.DraftLayout.VideoState.Volume * 100.0;
+                    TxtRightVolume.Text = $"{(int)(state.DraftLayout.VideoState.Volume * 100.0)}%";
                 }
             }
             finally
@@ -458,7 +472,7 @@ namespace RejiDisplay
 
                 if (!string.IsNullOrEmpty(_leftState.DraftLayout.MediaPath) && _leftState.DraftLayout.MediaPath.Contains("TestPattern_"))
                 {
-                    GenerateAndApplyTestPattern("LEFT", _leftState, ImgLeftPreview, PanelLeftDropPrompt, TxtLeftMediaPath, TxtLeftError, BtnLeftRestoreMedia);
+                    GenerateAndApplyTestPattern("LEFT", _leftState, ImgLeftPreview, MediaLeftPreviewVideo, PanelLeftDropPrompt, TxtLeftMediaPath, TxtLeftError, BtnLeftRestoreMedia, PanelLeftVideoControls);
                 }
                 else
                 {
@@ -467,7 +481,7 @@ namespace RejiDisplay
 
                 if (!string.IsNullOrEmpty(_rightState.DraftLayout.MediaPath) && _rightState.DraftLayout.MediaPath.Contains("TestPattern_"))
                 {
-                    GenerateAndApplyTestPattern("RIGHT", _rightState, ImgRightPreview, PanelRightDropPrompt, TxtRightMediaPath, TxtRightError, BtnRightRestoreMedia);
+                    GenerateAndApplyTestPattern("RIGHT", _rightState, ImgRightPreview, MediaRightPreviewVideo, PanelRightDropPrompt, TxtRightMediaPath, TxtRightError, BtnRightRestoreMedia, PanelRightVideoControls);
                 }
                 else
                 {
@@ -573,12 +587,51 @@ namespace RejiDisplay
 
         private void DropZoneLeft_Drop(object sender, DragEventArgs e)
         {
-            HandleFileDrop("LEFT", _leftState, e, ImgLeftPreview, PanelLeftDropPrompt, TxtLeftMediaPath, TxtLeftError);
+            HandleFileDrop("LEFT", _leftState, e, ImgLeftPreview, MediaLeftPreviewVideo, PanelLeftDropPrompt, TxtLeftMediaPath, TxtLeftError, PanelLeftVideoControls);
         }
 
         private void DropZoneRight_Drop(object sender, DragEventArgs e)
         {
-            HandleFileDrop("RIGHT", _rightState, e, ImgRightPreview, PanelRightDropPrompt, TxtRightMediaPath, TxtRightError);
+            HandleFileDrop("RIGHT", _rightState, e, ImgRightPreview, MediaRightPreviewVideo, PanelRightDropPrompt, TxtRightMediaPath, TxtRightError, PanelRightVideoControls);
+        }
+
+        private void BtnLeftChooseMedia_Click(object sender, RoutedEventArgs e)
+        {
+            ChooseMediaForCard("LEFT", _leftState, ImgLeftPreview, MediaLeftPreviewVideo, PanelLeftDropPrompt, TxtLeftMediaPath, TxtLeftError, PanelLeftVideoControls);
+        }
+
+        private void BtnRightChooseMedia_Click(object sender, RoutedEventArgs e)
+        {
+            ChooseMediaForCard("RIGHT", _rightState, ImgRightPreview, MediaRightPreviewVideo, PanelRightDropPrompt, TxtRightMediaPath, TxtRightError, PanelRightVideoControls);
+        }
+
+        private void ChooseMediaForCard(
+            string cardId,
+            OutputCardState cardState,
+            Image previewImg,
+            MediaElement previewVideo,
+            StackPanel promptPanel,
+            TextBlock mediaPathTxt,
+            TextBlock errorTxt,
+            Border videoControlsPanel)
+        {
+            var dialog = new Microsoft.Win32.OpenFileDialog
+            {
+                Title = $"{cardId} LED için Medya Dosyası Seçin",
+                Filter = "Desteklenen Tüm Medyalar (*.mp4;*.mov;*.mkv;*.webm;*.png;*.jpg;*.jpeg;*.bmp)|*.mp4;*.mov;*.mkv;*.webm;*.png;*.jpg;*.jpeg;*.bmp|Video Dosyaları (*.mp4;*.mov;*.mkv;*.webm;*.avi;*.wmv)|*.mp4;*.mov;*.mkv;*.webm;*.avi;*.wmv|Görsel Dosyaları (*.png;*.jpg;*.jpeg;*.bmp;*.webp)|*.png;*.jpg;*.jpeg;*.bmp;*.webp|Tüm Dosyalar (*.*)|*.*"
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                if (LoadMediaForCard(cardId, cardState, dialog.FileName, previewImg, previewVideo, promptPanel, mediaPathTxt, errorTxt, videoControlsPanel))
+                {
+                    SaveAppSettings();
+                    if (cardState.IsLiveUpdateEnabled && _outputManager.IsOutputActive(cardId))
+                    {
+                        ApplyDraftToLive(cardId);
+                    }
+                }
+            }
         }
 
         private void HandleFileDrop(
@@ -586,9 +639,11 @@ namespace RejiDisplay
             OutputCardState cardState,
             DragEventArgs e,
             Image previewImg,
+            MediaElement previewVideo,
             StackPanel promptPanel,
             TextBlock mediaPathTxt,
-            TextBlock errorTxt)
+            TextBlock errorTxt,
+            Border videoControlsPanel)
         {
             if (e.Data.GetDataPresent(DataFormats.FileDrop))
             {
@@ -596,12 +651,9 @@ namespace RejiDisplay
                 if (files != null && files.Length > 0)
                 {
                     string filePath = files[0];
-                    if (LoadImageForCard(cardId, cardState, filePath, previewImg, promptPanel, mediaPathTxt, errorTxt))
+                    if (LoadMediaForCard(cardId, cardState, filePath, previewImg, previewVideo, promptPanel, mediaPathTxt, errorTxt, videoControlsPanel))
                     {
-                        cardState.DraftLayout.MediaPath = filePath;
                         SaveAppSettings();
-                        RenderDraftPreview(cardId);
-
                         if (cardState.IsLiveUpdateEnabled && _outputManager.IsOutputActive(cardId))
                         {
                             ApplyDraftToLive(cardId);
@@ -611,16 +663,18 @@ namespace RejiDisplay
             }
         }
 
-        private bool LoadImageForCard(
+        private bool LoadMediaForCard(
             string cardId,
             OutputCardState cardState,
             string filePath,
             Image previewImg,
+            MediaElement previewVideo,
             StackPanel promptPanel,
             TextBlock mediaPathTxt,
-            TextBlock errorTxt)
+            TextBlock errorTxt,
+            Border videoControlsPanel)
         {
-            if (!ImageValidationHelper.ValidateImageFile(filePath, out string err))
+            if (!MediaValidationHelper.ValidateMediaFile(filePath, out string err))
             {
                 errorTxt.Text = $"HATA: {err}";
                 errorTxt.Visibility = Visibility.Visible;
@@ -629,17 +683,45 @@ namespace RejiDisplay
 
             try
             {
-                var bitmap = CreateBitmap(filePath);
-                if (bitmap != null)
+                var mediaSource = MediaSource.FromFile(filePath);
+                cardState.DraftLayout.MediaSource = mediaSource;
+
+                if (mediaSource.Type == MediaSourceType.Video)
                 {
-                    cardState.DraftLayout.MediaPath = filePath;
-                    previewImg.Source = bitmap;
-                    previewImg.Visibility = Visibility.Visible;
+                    previewImg.Visibility = Visibility.Collapsed;
+                    previewImg.Source = null;
+
+                    previewVideo.Visibility = Visibility.Visible;
+                    previewVideo.Source = new Uri(filePath, UriKind.Absolute);
+                    previewVideo.Play();
+                    previewVideo.Pause(); // Display first frame thumbnail in draft preview!
+
+                    videoControlsPanel.Visibility = Visibility.Visible;
                     promptPanel.Visibility = Visibility.Collapsed;
-                    mediaPathTxt.Text = Path.GetFileName(filePath);
+                    mediaPathTxt.Text = $"🎬 {mediaSource.DisplayName}";
                     errorTxt.Visibility = Visibility.Collapsed;
+
                     RenderDraftPreview(cardId);
                     return true;
+                }
+                else
+                {
+                    previewVideo.Stop();
+                    previewVideo.Source = null;
+                    previewVideo.Visibility = Visibility.Collapsed;
+                    videoControlsPanel.Visibility = Visibility.Collapsed;
+
+                    var bitmap = CreateBitmap(filePath);
+                    if (bitmap != null)
+                    {
+                        previewImg.Source = bitmap;
+                        previewImg.Visibility = Visibility.Visible;
+                        promptPanel.Visibility = Visibility.Collapsed;
+                        mediaPathTxt.Text = $"🖼️ {mediaSource.DisplayName}";
+                        errorTxt.Visibility = Visibility.Collapsed;
+                        RenderDraftPreview(cardId);
+                        return true;
+                    }
                 }
             }
             catch (Exception ex)
@@ -669,26 +751,130 @@ namespace RejiDisplay
             }
         }
 
+        // --- Video Control Handlers ---
+
+        private void BtnLeftPlay_Click(object sender, RoutedEventArgs e)
+        {
+            SetVideoPlaybackStatus("LEFT", _leftState, PlaybackStatus.Playing);
+        }
+
+        private void BtnLeftPause_Click(object sender, RoutedEventArgs e)
+        {
+            SetVideoPlaybackStatus("LEFT", _leftState, PlaybackStatus.Paused);
+        }
+
+        private void BtnLeftStopVideo_Click(object sender, RoutedEventArgs e)
+        {
+            SetVideoPlaybackStatus("LEFT", _leftState, PlaybackStatus.Stopped);
+        }
+
+        private void BtnRightPlay_Click(object sender, RoutedEventArgs e)
+        {
+            SetVideoPlaybackStatus("RIGHT", _rightState, PlaybackStatus.Playing);
+        }
+
+        private void BtnRightPause_Click(object sender, RoutedEventArgs e)
+        {
+            SetVideoPlaybackStatus("RIGHT", _rightState, PlaybackStatus.Paused);
+        }
+
+        private void BtnRightStopVideo_Click(object sender, RoutedEventArgs e)
+        {
+            SetVideoPlaybackStatus("RIGHT", _rightState, PlaybackStatus.Stopped);
+        }
+
+        private void SetVideoPlaybackStatus(string cardId, OutputCardState cardState, PlaybackStatus status)
+        {
+            if (_isInitializing || _isUpdatingUI) return;
+            cardState.DraftLayout.VideoState.Status = status;
+
+            var previewVideo = (cardId == "LEFT") ? MediaLeftPreviewVideo : MediaRightPreviewVideo;
+            if (previewVideo != null && previewVideo.Visibility == Visibility.Visible)
+            {
+                if (status == PlaybackStatus.Playing) previewVideo.Play();
+                else if (status == PlaybackStatus.Paused) previewVideo.Pause();
+                else { previewVideo.Stop(); previewVideo.Position = TimeSpan.Zero; }
+            }
+
+            if (cardState.IsActive && _outputManager.IsOutputActive(cardId))
+            {
+                cardState.LiveAppliedLayout.VideoState.Status = status;
+                ApplyDraftToLive(cardId);
+            }
+        }
+
+        private void ChkLeftLoop_Click(object sender, RoutedEventArgs e)
+        {
+            _leftState.DraftLayout.VideoState.IsLooping = (ChkLeftLoop.IsChecked == true);
+            if (_leftState.IsActive) ApplyDraftToLive("LEFT");
+        }
+
+        private void ChkLeftMute_Click(object sender, RoutedEventArgs e)
+        {
+            _leftState.DraftLayout.VideoState.IsMuted = (ChkLeftMute.IsChecked == true);
+            if (_leftState.IsActive) ApplyDraftToLive("LEFT");
+        }
+
+        private void SliderLeftVolume_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            if (_isInitializing || _isUpdatingUI || _leftState == null) return;
+            _leftState.DraftLayout.VideoState.Volume = SliderLeftVolume.Value / 100.0;
+            if (TxtLeftVolume != null) TxtLeftVolume.Text = $"{(int)SliderLeftVolume.Value}%";
+            if (_leftState.IsActive && _leftState.IsLiveUpdateEnabled) ApplyDraftToLive("LEFT");
+        }
+
+        private void SliderLeftVideoPosition_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            // Optional timeline seek
+        }
+
+        private void ChkRightLoop_Click(object sender, RoutedEventArgs e)
+        {
+            _rightState.DraftLayout.VideoState.IsLooping = (ChkRightLoop.IsChecked == true);
+            if (_rightState.IsActive) ApplyDraftToLive("RIGHT");
+        }
+
+        private void ChkRightMute_Click(object sender, RoutedEventArgs e)
+        {
+            _rightState.DraftLayout.VideoState.IsMuted = (ChkRightMute.IsChecked == true);
+            if (_rightState.IsActive) ApplyDraftToLive("RIGHT");
+        }
+
+        private void SliderRightVolume_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            if (_isInitializing || _isUpdatingUI || _rightState == null) return;
+            _rightState.DraftLayout.VideoState.Volume = SliderRightVolume.Value / 100.0;
+            if (TxtRightVolume != null) TxtRightVolume.Text = $"{(int)SliderRightVolume.Value}%";
+            if (_rightState.IsActive && _rightState.IsLiveUpdateEnabled) ApplyDraftToLive("RIGHT");
+        }
+
+        private void SliderRightVideoPosition_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            // Optional timeline seek
+        }
+
         // --- Test Pattern Handlers ---
 
         private void BtnLeftTestPattern_Click(object sender, RoutedEventArgs e)
         {
-            GenerateAndApplyTestPattern("LEFT", _leftState, ImgLeftPreview, PanelLeftDropPrompt, TxtLeftMediaPath, TxtLeftError, BtnLeftRestoreMedia);
+            GenerateAndApplyTestPattern("LEFT", _leftState, ImgLeftPreview, MediaLeftPreviewVideo, PanelLeftDropPrompt, TxtLeftMediaPath, TxtLeftError, BtnLeftRestoreMedia, PanelLeftVideoControls);
         }
 
         private void BtnRightTestPattern_Click(object sender, RoutedEventArgs e)
         {
-            GenerateAndApplyTestPattern("RIGHT", _rightState, ImgRightPreview, PanelRightDropPrompt, TxtRightMediaPath, TxtRightError, BtnRightRestoreMedia);
+            GenerateAndApplyTestPattern("RIGHT", _rightState, ImgRightPreview, MediaRightPreviewVideo, PanelRightDropPrompt, TxtRightMediaPath, TxtRightError, BtnRightRestoreMedia, PanelRightVideoControls);
         }
 
         private void GenerateAndApplyTestPattern(
             string cardId,
             OutputCardState cardState,
             Image previewImg,
+            MediaElement previewVideo,
             StackPanel promptPanel,
             TextBlock mediaPathTxt,
             TextBlock errorTxt,
-            Button restoreBtn)
+            Button restoreBtn,
+            Border videoControlsPanel)
         {
             if (_isInitializing || _isUpdatingUI) return;
 
@@ -701,9 +887,8 @@ namespace RejiDisplay
             try
             {
                 string patternPath = TestPatternGenerator.SaveTestPatternToTempFile(cardState.Title, cardState.Calibration.LogicalLedWidth, cardState.Calibration.LogicalLedHeight);
-                if (LoadImageForCard(cardId, cardState, patternPath, previewImg, promptPanel, mediaPathTxt, errorTxt))
+                if (LoadMediaForCard(cardId, cardState, patternPath, previewImg, previewVideo, promptPanel, mediaPathTxt, errorTxt, videoControlsPanel))
                 {
-                    cardState.DraftLayout.MediaPath = patternPath;
                     SaveAppSettings();
                     RenderDraftPreview(cardId);
 
@@ -724,22 +909,24 @@ namespace RejiDisplay
 
         private void BtnLeftRestoreMedia_Click(object sender, RoutedEventArgs e)
         {
-            RestorePreviousMedia("LEFT", _leftState, ImgLeftPreview, PanelLeftDropPrompt, TxtLeftMediaPath, TxtLeftError, BtnLeftRestoreMedia);
+            RestorePreviousMedia("LEFT", _leftState, ImgLeftPreview, MediaLeftPreviewVideo, PanelLeftDropPrompt, TxtLeftMediaPath, TxtLeftError, BtnLeftRestoreMedia, PanelLeftVideoControls);
         }
 
         private void BtnRightRestoreMedia_Click(object sender, RoutedEventArgs e)
         {
-            RestorePreviousMedia("RIGHT", _rightState, ImgRightPreview, PanelRightDropPrompt, TxtRightMediaPath, TxtRightError, BtnRightRestoreMedia);
+            RestorePreviousMedia("RIGHT", _rightState, ImgRightPreview, MediaRightPreviewVideo, PanelRightDropPrompt, TxtRightMediaPath, TxtRightError, BtnRightRestoreMedia, PanelRightVideoControls);
         }
 
         private void RestorePreviousMedia(
             string cardId,
             OutputCardState cardState,
             Image previewImg,
+            MediaElement previewVideo,
             StackPanel promptPanel,
             TextBlock mediaPathTxt,
             TextBlock errorTxt,
-            Button restoreBtn)
+            Button restoreBtn,
+            Border videoControlsPanel)
         {
             if (_isInitializing || _isUpdatingUI) return;
 
@@ -749,9 +936,8 @@ namespace RejiDisplay
                 cardState.PreviousMediaPath = null;
                 restoreBtn.Visibility = Visibility.Collapsed;
 
-                if (LoadImageForCard(cardId, cardState, path, previewImg, promptPanel, mediaPathTxt, errorTxt))
+                if (LoadMediaForCard(cardId, cardState, path, previewImg, previewVideo, promptPanel, mediaPathTxt, errorTxt, videoControlsPanel))
                 {
-                    cardState.DraftLayout.MediaPath = path;
                     SaveAppSettings();
                     RenderDraftPreview(cardId);
 
@@ -760,7 +946,7 @@ namespace RejiDisplay
                         ApplyDraftToLive(cardId);
                     }
 
-                    TxtGlobalStatus.Text = $"{cardId} LED için önceki görsel geri yüklendi.";
+                    TxtGlobalStatus.Text = $"{cardId} LED için önceki medya geri yüklendi.";
                 }
             }
         }
@@ -1069,7 +1255,7 @@ namespace RejiDisplay
 
             if (dimensionsChanged && !string.IsNullOrEmpty(_leftState.DraftLayout.MediaPath) && _leftState.DraftLayout.MediaPath.Contains("TestPattern_"))
             {
-                GenerateAndApplyTestPattern("LEFT", _leftState, ImgLeftPreview, PanelLeftDropPrompt, TxtLeftMediaPath, TxtLeftError, BtnLeftRestoreMedia);
+                GenerateAndApplyTestPattern("LEFT", _leftState, ImgLeftPreview, MediaLeftPreviewVideo, PanelLeftDropPrompt, TxtLeftMediaPath, TxtLeftError, BtnLeftRestoreMedia, PanelLeftVideoControls);
             }
             else
             {
@@ -1107,7 +1293,7 @@ namespace RejiDisplay
 
             if (dimensionsChanged && !string.IsNullOrEmpty(_rightState.DraftLayout.MediaPath) && _rightState.DraftLayout.MediaPath.Contains("TestPattern_"))
             {
-                GenerateAndApplyTestPattern("RIGHT", _rightState, ImgRightPreview, PanelRightDropPrompt, TxtRightMediaPath, TxtRightError, BtnRightRestoreMedia);
+                GenerateAndApplyTestPattern("RIGHT", _rightState, ImgRightPreview, MediaRightPreviewVideo, PanelRightDropPrompt, TxtRightMediaPath, TxtRightError, BtnRightRestoreMedia, PanelRightVideoControls);
             }
             else
             {
