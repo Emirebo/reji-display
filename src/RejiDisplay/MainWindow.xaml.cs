@@ -434,7 +434,8 @@ namespace RejiDisplay
             var cardState = (cardId == "LEFT") ? _leftState : _rightState;
             var previewImg = (cardId == "LEFT") ? ImgLeftPreview : ImgRightPreview;
             var previewVideo = (cardId == "LEFT") ? MediaLeftPreviewVideo : MediaRightPreviewVideo;
-            var previewWeb = (cardId == "LEFT") ? MediaLeftPreviewWeb : MediaRightPreviewWeb;
+            var webPreviewPrompt = (cardId == "LEFT") ? PanelLeftWebPreviewPrompt : PanelRightWebPreviewPrompt;
+            var webPreviewHostTxt = (cardId == "LEFT") ? TxtLeftWebPreviewHost : TxtRightWebPreviewHost;
             var previewCanvas = (cardId == "LEFT") ? CanvasLeftPreviewViewport : CanvasRightPreviewViewport;
 
             if (previewCanvas == null) return;
@@ -462,30 +463,28 @@ namespace RejiDisplay
             previewCanvas.Width = viewportW;
             previewCanvas.Height = viewportH;
 
-            if (cardState.DraftLayout.MediaSource.Type == MediaSourceType.Website && previewWeb != null)
+            if (cardState.DraftLayout.MediaSource.Type == MediaSourceType.Website)
             {
                 if (previewImg != null) previewImg.Visibility = Visibility.Collapsed;
                 if (previewVideo != null) previewVideo.Visibility = Visibility.Collapsed;
-                previewWeb.Visibility = Visibility.Visible;
 
-                double srcW = cardState.Calibration.LogicalLedWidth > 0 ? cardState.Calibration.LogicalLedWidth : viewportW;
-                double srcH = cardState.Calibration.LogicalLedHeight > 0 ? cardState.Calibration.LogicalLedHeight : viewportH;
+                if (webPreviewPrompt != null)
+                {
+                    webPreviewPrompt.Visibility = Visibility.Visible;
+                    webPreviewPrompt.Width = Math.Max(40, viewportW - 10);
+                    webPreviewPrompt.Height = Math.Max(40, viewportH - 10);
+                    Canvas.SetLeft(webPreviewPrompt, 5);
+                    Canvas.SetTop(webPreviewPrompt, 5);
 
-                var rect = LayoutTransformHelper.CalculateLayoutRect(
-                    srcW,
-                    srcH,
-                    viewportW,
-                    viewportH,
-                    cardState.DraftLayout);
-
-                previewWeb.Width = rect.Width;
-                previewWeb.Height = rect.Height;
-                Canvas.SetLeft(previewWeb, rect.Left);
-                Canvas.SetTop(previewWeb, rect.Top);
+                    if (webPreviewHostTxt != null)
+                    {
+                        webPreviewHostTxt.Text = cardState.DraftLayout.MediaSource.DisplayName;
+                    }
+                }
             }
             else if (cardState.DraftLayout.MediaSource.Type == MediaSourceType.Video && previewVideo != null && previewVideo.Visibility == Visibility.Visible)
             {
-                if (previewWeb != null) previewWeb.Visibility = Visibility.Collapsed;
+                if (webPreviewPrompt != null) webPreviewPrompt.Visibility = Visibility.Collapsed;
                 double vidW = previewVideo.NaturalVideoWidth > 0 ? previewVideo.NaturalVideoWidth : 1920;
                 double vidH = previewVideo.NaturalVideoHeight > 0 ? previewVideo.NaturalVideoHeight : 1080;
 
@@ -503,7 +502,7 @@ namespace RejiDisplay
             }
             else if (previewImg != null && previewImg.Source is BitmapImage bitmap && bitmap.PixelWidth > 0 && bitmap.PixelHeight > 0)
             {
-                if (previewWeb != null) previewWeb.Visibility = Visibility.Collapsed;
+                if (webPreviewPrompt != null) webPreviewPrompt.Visibility = Visibility.Collapsed;
                 var rect = LayoutTransformHelper.CalculateLayoutRect(
                     bitmap.PixelWidth,
                     bitmap.PixelHeight,
@@ -827,26 +826,26 @@ namespace RejiDisplay
 
         private void BtnLeftRefreshWeb_Click(object sender, RoutedEventArgs e)
         {
-            RefreshWebForCard("LEFT", _leftState, MediaLeftPreviewWeb);
+            RefreshWebForCard("LEFT", _leftState);
         }
 
         private void BtnRightRefreshWeb_Click(object sender, RoutedEventArgs e)
         {
-            RefreshWebForCard("RIGHT", _rightState, MediaRightPreviewWeb);
+            RefreshWebForCard("RIGHT", _rightState);
         }
 
-        private void RefreshWebForCard(string cardId, OutputCardState cardState, Microsoft.Web.WebView2.Wpf.WebView2 webView)
+        private void RefreshWebForCard(string cardId, OutputCardState cardState)
         {
             try
             {
-                if (webView != null && webView.CoreWebView2 != null)
-                {
-                    webView.Reload();
-                }
-
                 if (cardState.IsActive && _outputManager.IsOutputActive(cardId))
                 {
                     ApplyDraftToLive(cardId);
+                    TxtGlobalStatus.Text = $"{cardId} LED web yayını yenilendi.";
+                }
+                else
+                {
+                    TxtGlobalStatus.Text = $"{cardId} LED taslak web adresi hazır.";
                 }
             }
             catch (Exception ex)
@@ -896,7 +895,8 @@ namespace RejiDisplay
         {
             var previewImg = (cardId == "LEFT") ? ImgLeftPreview : ImgRightPreview;
             var previewVideo = (cardId == "LEFT") ? MediaLeftPreviewVideo : MediaRightPreviewVideo;
-            var previewWeb = (cardId == "LEFT") ? MediaLeftPreviewWeb : MediaRightPreviewWeb;
+            var webPreviewPrompt = (cardId == "LEFT") ? PanelLeftWebPreviewPrompt : PanelRightWebPreviewPrompt;
+            var webPreviewHostTxt = (cardId == "LEFT") ? TxtLeftWebPreviewHost : TxtRightWebPreviewHost;
             var promptPanel = (cardId == "LEFT") ? PanelLeftDropPrompt : PanelRightDropPrompt;
             var mediaPathTxt = (cardId == "LEFT") ? TxtLeftMediaPath : TxtRightMediaPath;
             var errorTxt = (cardId == "LEFT") ? TxtLeftError : TxtRightError;
@@ -930,12 +930,16 @@ namespace RejiDisplay
                 webPanel.Visibility = Visibility.Visible;
                 promptPanel.Visibility = Visibility.Collapsed;
 
+                if (webPreviewPrompt != null)
+                {
+                    webPreviewPrompt.Visibility = Visibility.Visible;
+                    if (webPreviewHostTxt != null) webPreviewHostTxt.Text = mediaSource.DisplayName;
+                }
+
                 webUrlTxt.Text = formattedUrl;
                 mediaPathTxt.Text = $"🌐 {mediaSource.DisplayName}";
                 errorTxt.Visibility = Visibility.Collapsed;
-                if (webStatusTxt != null) webStatusTxt.Text = "Durum: Yükleniyor...";
-
-                _ = InitializeAndNavigatePreviewWebAsync(previewWeb, formattedUrl, cardState.DraftLayout.WebsiteState, webStatusTxt);
+                if (webStatusTxt != null) webStatusTxt.Text = "Durum: Web Sitesi Hazır";
 
                 RenderDraftPreview(cardId);
                 return true;
@@ -947,27 +951,6 @@ namespace RejiDisplay
             }
 
             return false;
-        }
-
-        private async System.Threading.Tasks.Task InitializeAndNavigatePreviewWebAsync(Microsoft.Web.WebView2.Wpf.WebView2 webView, string url, WebsiteState state, TextBlock? statusTxt)
-        {
-            try
-            {
-                webView.Visibility = Visibility.Visible;
-                await webView.EnsureCoreWebView2Async();
-                if (webView.CoreWebView2 != null)
-                {
-                    webView.CoreWebView2.IsMuted = state.IsMuted;
-                    webView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;
-                    if (state.ZoomFactor > 0) webView.ZoomFactor = state.ZoomFactor;
-                    webView.Source = new Uri(url);
-                }
-                if (statusTxt != null) statusTxt.Text = "Durum: Web Sitesi Yüklendi (Hazır)";
-            }
-            catch (Exception ex)
-            {
-                if (statusTxt != null) statusTxt.Text = $"Durum: Hata - {ex.Message}";
-            }
         }
 
         private bool LoadMediaForCard(

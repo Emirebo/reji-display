@@ -331,9 +331,18 @@
                                     <TextBlock Text="🎬" FontSize="34" HorizontalAlignment="Center"/>
                                     <TextBlock Text="Medya dosyasını (Görsel/Video) sürükleyin" FontWeight="Bold" FontSize="12" Foreground="{StaticResource TextPrimary}" HorizontalAlignment="Center"/>
                                 </StackPanel>
+                                <Border x:Name="PanelLeftWebPreviewPrompt" Visibility="Collapsed" Background="#1E293B" BorderBrush="#38BDF8" BorderThickness="1" CornerRadius="6" Padding="8" Width="130" Height="160" Canvas.Left="5" Canvas.Top="5">
+                                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                                        <TextBlock Text="🌐" FontSize="30" HorizontalAlignment="Center" Margin="0,0,0,2"/>
+                                        <TextBlock Text="WEB SİTESİ DRAFT" FontWeight="ExtraBold" FontSize="10" Foreground="#38BDF8" HorizontalAlignment="Center" TextAlignment="Center"/>
+                                        <TextBlock x:Name="TxtLeftWebPreviewHost" Text="subtitles.live.com" FontSize="10" FontWeight="Bold" Foreground="#F9FAFC" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" Margin="0,4,0,4"/>
+                                        <Border Background="#0EA5E9" CornerRadius="4" Padding="5,2" HorizontalAlignment="Center" Margin="0,2,0,0">
+                                            <TextBlock Text="YAYINA HAZIR" FontSize="9" FontWeight="Bold" Foreground="White"/>
+                                        </Border>
+                                    </StackPanel>
+                                </Border>
                                 <Image x:Name="ImgLeftPreview" Visibility="Collapsed" RenderTransformOrigin="0.5,0.5"/>
                                 <MediaElement x:Name="MediaLeftPreviewVideo" Visibility="Collapsed" LoadedBehavior="Manual" UnloadedBehavior="Manual" IsMuted="True" Volume="0" MediaOpened="MediaLeftPreviewVideo_MediaOpened"/>
-                                <wv2:WebView2 x:Name="MediaLeftPreviewWeb" Visibility="Collapsed"/>
                             </Canvas>
                         </Border>
 
@@ -560,9 +569,18 @@
                                     <TextBlock Text="🎬" FontSize="34" HorizontalAlignment="Center"/>
                                     <TextBlock Text="Medya dosyasını (Görsel/Video) sürükleyin" FontWeight="Bold" FontSize="12" Foreground="{StaticResource TextPrimary}" HorizontalAlignment="Center"/>
                                 </StackPanel>
+                                <Border x:Name="PanelRightWebPreviewPrompt" Visibility="Collapsed" Background="#1E293B" BorderBrush="#38BDF8" BorderThickness="1" CornerRadius="6" Padding="8" Width="130" Height="160" Canvas.Left="5" Canvas.Top="5">
+                                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                                        <TextBlock Text="🌐" FontSize="30" HorizontalAlignment="Center" Margin="0,0,0,2"/>
+                                        <TextBlock Text="WEB SİTESİ DRAFT" FontWeight="ExtraBold" FontSize="10" Foreground="#38BDF8" HorizontalAlignment="Center" TextAlignment="Center"/>
+                                        <TextBlock x:Name="TxtRightWebPreviewHost" Text="subtitles.live.com" FontSize="10" FontWeight="Bold" Foreground="#F9FAFC" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" Margin="0,4,0,4"/>
+                                        <Border Background="#0EA5E9" CornerRadius="4" Padding="5,2" HorizontalAlignment="Center" Margin="0,2,0,0">
+                                            <TextBlock Text="YAYINA HAZIR" FontSize="9" FontWeight="Bold" Foreground="White"/>
+                                        </Border>
+                                    </StackPanel>
+                                </Border>
                                 <Image x:Name="ImgRightPreview" Visibility="Collapsed" RenderTransformOrigin="0.5,0.5"/>
                                 <MediaElement x:Name="MediaRightPreviewVideo" Visibility="Collapsed" LoadedBehavior="Manual" UnloadedBehavior="Manual" IsMuted="True" Volume="0" MediaOpened="MediaRightPreviewVideo_MediaOpened"/>
-                                <wv2:WebView2 x:Name="MediaRightPreviewWeb" Visibility="Collapsed"/>
                             </Canvas>
                         </Border>
 
