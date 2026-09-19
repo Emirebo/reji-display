@@ -12,6 +12,8 @@ namespace RejiDisplay.Models
         public ImageLayoutState DraftLayout { get; set; } = new();
         public ImageLayoutState LiveAppliedLayout { get; set; } = new();
 
+        public string? PreviousMediaPath { get; set; }
+
         public bool IsLiveUpdateEnabled { get; set; } = false;
         public bool IsBlackout { get; set; }
         public bool IsActive { get; set; }

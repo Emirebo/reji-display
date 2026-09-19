@@ -650,6 +650,102 @@ namespace RejiDisplay
             }
         }
 
+        // --- Test Pattern Handlers ---
+
+        private void BtnLeftTestPattern_Click(object sender, RoutedEventArgs e)
+        {
+            GenerateAndApplyTestPattern("LEFT", _leftState, ImgLeftPreview, PanelLeftDropPrompt, TxtLeftMediaPath, TxtLeftError, BtnLeftRestoreMedia);
+        }
+
+        private void BtnRightTestPattern_Click(object sender, RoutedEventArgs e)
+        {
+            GenerateAndApplyTestPattern("RIGHT", _rightState, ImgRightPreview, PanelRightDropPrompt, TxtRightMediaPath, TxtRightError, BtnRightRestoreMedia);
+        }
+
+        private void GenerateAndApplyTestPattern(
+            string cardId,
+            OutputCardState cardState,
+            Image previewImg,
+            StackPanel promptPanel,
+            TextBlock mediaPathTxt,
+            TextBlock errorTxt,
+            Button restoreBtn)
+        {
+            if (_isInitializing || _isUpdatingUI) return;
+
+            if (!string.IsNullOrEmpty(cardState.DraftLayout.MediaPath) && !cardState.DraftLayout.MediaPath.Contains("TestPattern_"))
+            {
+                cardState.PreviousMediaPath = cardState.DraftLayout.MediaPath;
+                restoreBtn.Visibility = Visibility.Visible;
+            }
+
+            try
+            {
+                string patternPath = TestPatternGenerator.SaveTestPatternToTempFile(cardState.Title, cardState.Calibration.LogicalLedWidth, cardState.Calibration.LogicalLedHeight);
+                if (LoadImageForCard(cardId, cardState, patternPath, previewImg, promptPanel, mediaPathTxt, errorTxt))
+                {
+                    cardState.DraftLayout.MediaPath = patternPath;
+                    SaveAppSettings();
+                    RenderDraftPreview(cardId);
+
+                    if (cardState.IsLiveUpdateEnabled && _outputManager.IsOutputActive(cardId))
+                    {
+                        ApplyDraftToLive(cardId);
+                    }
+
+                    TxtGlobalStatus.Text = $"{cardId} LED Test Deseni oluşturuldu ve önizlemeye yüklendi ({cardState.Calibration.LogicalLedWidth}x{cardState.Calibration.LogicalLedHeight}).";
+                }
+            }
+            catch (Exception ex)
+            {
+                errorTxt.Text = $"Test deseni hatası: {ex.Message}";
+                errorTxt.Visibility = Visibility.Visible;
+            }
+        }
+
+        private void BtnLeftRestoreMedia_Click(object sender, RoutedEventArgs e)
+        {
+            RestorePreviousMedia("LEFT", _leftState, ImgLeftPreview, PanelLeftDropPrompt, TxtLeftMediaPath, TxtLeftError, BtnLeftRestoreMedia);
+        }
+
+        private void BtnRightRestoreMedia_Click(object sender, RoutedEventArgs e)
+        {
+            RestorePreviousMedia("RIGHT", _rightState, ImgRightPreview, PanelRightDropPrompt, TxtRightMediaPath, TxtRightError, BtnRightRestoreMedia);
+        }
+
+        private void RestorePreviousMedia(
+            string cardId,
+            OutputCardState cardState,
+            Image previewImg,
+            StackPanel promptPanel,
+            TextBlock mediaPathTxt,
+            TextBlock errorTxt,
+            Button restoreBtn)
+        {
+            if (_isInitializing || _isUpdatingUI) return;
+
+            if (!string.IsNullOrEmpty(cardState.PreviousMediaPath) && File.Exists(cardState.PreviousMediaPath))
+            {
+                string path = cardState.PreviousMediaPath;
+                cardState.PreviousMediaPath = null;
+                restoreBtn.Visibility = Visibility.Collapsed;
+
+                if (LoadImageForCard(cardId, cardState, path, previewImg, promptPanel, mediaPathTxt, errorTxt))
+                {
+                    cardState.DraftLayout.MediaPath = path;
+                    SaveAppSettings();
+                    RenderDraftPreview(cardId);
+
+                    if (cardState.IsLiveUpdateEnabled && _outputManager.IsOutputActive(cardId))
+                    {
+                        ApplyDraftToLive(cardId);
+                    }
+
+                    TxtGlobalStatus.Text = $"{cardId} LED için önceki görsel geri yüklendi.";
+                }
+            }
+        }
+
         // --- Layout Control Handlers (Draft Edits) ---
 
         private void RadioLeftScale_Checked(object sender, RoutedEventArgs e)
