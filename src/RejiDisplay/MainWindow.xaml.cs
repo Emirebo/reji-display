@@ -27,10 +27,12 @@ namespace RejiDisplay
         private OutputCardState _rightState = new() { CardId = "RIGHT", Title = "RIGHT LED" };
 
         private AppSettings _appSettings = new();
+        private bool _isInitializing = true;
         private bool _isUpdatingUI = false;
 
         public MainWindow()
         {
+            _isInitializing = true;
             _displayService = new DisplayService();
             _settingsService = new SettingsService();
             _outputManager = new OutputManager();
@@ -57,6 +59,7 @@ namespace RejiDisplay
             finally
             {
                 _isUpdatingUI = false;
+                _isInitializing = false;
             }
 
             RenderDraftPreview("LEFT");
@@ -438,7 +441,7 @@ namespace RejiDisplay
 
         private void CmbVenuePresets_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (_isUpdatingUI) return;
+            if (_isInitializing || _isUpdatingUI || CmbVenuePresets == null) return;
 
             if (CmbVenuePresets.SelectedItem is ComboBoxItem item && item.Tag is VenuePreset preset)
             {
@@ -463,7 +466,7 @@ namespace RejiDisplay
 
         private void CmbReservedCenter_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (_isUpdatingUI || _settingsService == null || _appSettings == null) return;
+            if (_isInitializing || _isUpdatingUI || CmbReservedCenter == null || _settingsService == null || _appSettings == null) return;
 
             if (CmbReservedCenter.SelectedItem is ComboBoxItem item && item.Tag is DisplayInfo display)
             {
@@ -484,7 +487,7 @@ namespace RejiDisplay
 
         private void CmbLeftDisplay_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (_isUpdatingUI || _settingsService == null || _appSettings?.LeftOutput == null || _leftState == null) return;
+            if (_isInitializing || _isUpdatingUI || CmbLeftDisplay == null || _settingsService == null || _appSettings?.LeftOutput == null || _leftState == null) return;
 
             var selected = GetSelectedDisplayFromCombo(CmbLeftDisplay);
             if (selected != null)
@@ -511,7 +514,7 @@ namespace RejiDisplay
 
         private void CmbRightDisplay_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (_isUpdatingUI || _settingsService == null || _appSettings?.RightOutput == null || _rightState == null) return;
+            if (_isInitializing || _isUpdatingUI || CmbRightDisplay == null || _settingsService == null || _appSettings?.RightOutput == null || _rightState == null) return;
 
             var selected = GetSelectedDisplayFromCombo(CmbRightDisplay);
             if (selected != null)
@@ -651,7 +654,7 @@ namespace RejiDisplay
 
         private void RadioLeftScale_Checked(object sender, RoutedEventArgs e)
         {
-            if (_isUpdatingUI || RadioLeftFit == null || _leftState == null) return;
+            if (_isInitializing || _isUpdatingUI || RadioLeftFit == null || _leftState == null) return;
 
             if (RadioLeftFit.IsChecked == true) _leftState.DraftLayout.ScaleMode = ScaleMode.Fit;
             else if (RadioLeftFill.IsChecked == true) _leftState.DraftLayout.ScaleMode = ScaleMode.Fill;
@@ -663,7 +666,7 @@ namespace RejiDisplay
 
         private void RadioRightScale_Checked(object sender, RoutedEventArgs e)
         {
-            if (_isUpdatingUI || RadioRightFit == null || _rightState == null) return;
+            if (_isInitializing || _isUpdatingUI || RadioRightFit == null || _rightState == null) return;
 
             if (RadioRightFit.IsChecked == true) _rightState.DraftLayout.ScaleMode = ScaleMode.Fit;
             else if (RadioRightFill.IsChecked == true) _rightState.DraftLayout.ScaleMode = ScaleMode.Fill;
@@ -675,7 +678,7 @@ namespace RejiDisplay
 
         private void SliderLeftLayout_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
-            if (_isUpdatingUI || _leftState == null) return;
+            if (_isInitializing || _isUpdatingUI || _leftState == null || SliderLeftZoom == null || SliderLeftOffsetX == null || SliderLeftOffsetY == null) return;
 
             _leftState.DraftLayout.Zoom = SliderLeftZoom.Value / 100.0;
             _leftState.DraftLayout.OffsetX = SliderLeftOffsetX.Value;
@@ -690,7 +693,7 @@ namespace RejiDisplay
 
         private void SliderRightLayout_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
-            if (_isUpdatingUI || _rightState == null) return;
+            if (_isInitializing || _isUpdatingUI || _rightState == null || SliderRightZoom == null || SliderRightOffsetX == null || SliderRightOffsetY == null) return;
 
             _rightState.DraftLayout.Zoom = SliderRightZoom.Value / 100.0;
             _rightState.DraftLayout.OffsetX = SliderRightOffsetX.Value;
@@ -705,6 +708,8 @@ namespace RejiDisplay
 
         private void OnDraftLayoutChanged(string cardId)
         {
+            if (_isInitializing || _isUpdatingUI || _settingsService == null || _appSettings == null) return;
+
             RenderDraftPreview(cardId);
             SaveAppSettings();
 
@@ -739,7 +744,7 @@ namespace RejiDisplay
 
         private void ChkLeftLiveSync_Changed(object sender, RoutedEventArgs e)
         {
-            if (_isUpdatingUI || _leftState == null) return;
+            if (_isInitializing || _isUpdatingUI || _leftState == null) return;
             _leftState.IsLiveUpdateEnabled = (ChkLeftLiveSync.IsChecked == true);
             _appSettings.LeftOutput.IsLiveUpdateEnabled = _leftState.IsLiveUpdateEnabled;
             SaveAppSettings();
@@ -747,7 +752,7 @@ namespace RejiDisplay
 
         private void ChkRightLiveSync_Changed(object sender, RoutedEventArgs e)
         {
-            if (_isUpdatingUI || _rightState == null) return;
+            if (_isInitializing || _isUpdatingUI || _rightState == null) return;
             _rightState.IsLiveUpdateEnabled = (ChkRightLiveSync.IsChecked == true);
             _appSettings.RightOutput.IsLiveUpdateEnabled = _rightState.IsLiveUpdateEnabled;
             SaveAppSettings();
@@ -927,6 +932,8 @@ namespace RejiDisplay
 
         private void TxtLeftCalibration_LostFocus(object sender, RoutedEventArgs e)
         {
+            if (_isInitializing || _isUpdatingUI || _leftState == null) return;
+
             if (int.TryParse(TxtLeftLedW.Text, out int w) && w > 0) _leftState.Calibration.LogicalLedWidth = w;
             if (int.TryParse(TxtLeftLedH.Text, out int h) && h > 0) _leftState.Calibration.LogicalLedHeight = h;
             if (int.TryParse(TxtLeftVpX.Text, out int vx)) _leftState.Calibration.ViewportX = vx;
@@ -938,6 +945,8 @@ namespace RejiDisplay
 
         private void TxtRightCalibration_LostFocus(object sender, RoutedEventArgs e)
         {
+            if (_isInitializing || _isUpdatingUI || _rightState == null) return;
+
             if (int.TryParse(TxtRightLedW.Text, out int w) && w > 0) _rightState.Calibration.LogicalLedWidth = w;
             if (int.TryParse(TxtRightLedH.Text, out int h) && h > 0) _rightState.Calibration.LogicalLedHeight = h;
             if (int.TryParse(TxtRightVpX.Text, out int vx)) _rightState.Calibration.ViewportX = vx;
@@ -949,6 +958,8 @@ namespace RejiDisplay
 
         private void SaveAppSettings()
         {
+            if (_isInitializing || _isUpdatingUI || _settingsService == null || _appSettings == null) return;
+
             _appSettings.LeftOutput.Calibration = _leftState.Calibration;
             _appSettings.LeftOutput.DraftLayout = _leftState.DraftLayout;
             _appSettings.LeftOutput.LiveAppliedLayout = _leftState.LiveAppliedLayout;
