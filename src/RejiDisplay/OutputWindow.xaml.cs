@@ -59,27 +59,27 @@ namespace RejiDisplay
             ViewportCanvas.Width = calibration.ViewportWidth;
             ViewportCanvas.Height = calibration.ViewportHeight;
 
-            LedViewportBorder.Width = calibration.ViewportWidth;
-            LedViewportBorder.Height = calibration.ViewportHeight;
-
             MediaImage.Source = bitmap;
 
             if (bitmap != null && bitmap.PixelWidth > 0 && bitmap.PixelHeight > 0)
             {
-                MediaImage.Width = bitmap.PixelWidth;
-                MediaImage.Height = bitmap.PixelHeight;
-
-                var transform = LayoutTransformHelper.CalculateTransform(
+                var rect = LayoutTransformHelper.CalculateLayoutRect(
                     bitmap.PixelWidth,
                     bitmap.PixelHeight,
                     calibration.ViewportWidth,
                     calibration.ViewportHeight,
                     layout);
 
-                MediaImage.RenderTransform = transform;
+                MediaImage.Width = rect.Width;
+                MediaImage.Height = rect.Height;
+                Canvas.SetLeft(MediaImage, rect.Left);
+                Canvas.SetTop(MediaImage, rect.Top);
+                MediaImage.RenderTransform = Transform.Identity;
             }
             else
             {
+                MediaImage.Width = 0;
+                MediaImage.Height = 0;
                 MediaImage.RenderTransform = Transform.Identity;
             }
 

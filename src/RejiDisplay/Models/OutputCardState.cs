@@ -7,7 +7,15 @@ namespace RejiDisplay.Models
         public string? AssignedDeviceName { get; set; }
         public string? AssignedDeviceId { get; set; }
 
-        public OutputCalibration Calibration { get; set; } = new();
+        public OutputCalibration DraftCalibration { get; set; } = new();
+        public OutputCalibration LiveAppliedCalibration { get; set; } = new();
+
+        // Convenience property mapping to DraftCalibration for UI controls
+        public OutputCalibration Calibration
+        {
+            get => DraftCalibration;
+            set => DraftCalibration = value ?? new OutputCalibration();
+        }
 
         public ImageLayoutState DraftLayout { get; set; } = new();
         public ImageLayoutState LiveAppliedLayout { get; set; } = new();
@@ -21,3 +29,4 @@ namespace RejiDisplay.Models
         public string ErrorText { get; set; } = string.Empty;
     }
 }
+

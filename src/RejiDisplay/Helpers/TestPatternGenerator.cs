@@ -118,7 +118,8 @@ namespace RejiDisplay.Helpers
             var bitmap = GenerateTestPattern(cardTitle, width, height);
             string tempDir = Path.Combine(Path.GetTempPath(), "RejiDisplay");
             Directory.CreateDirectory(tempDir);
-            string tempPath = Path.Combine(tempDir, $"TestPattern_{cardTitle}_{width}x{height}.png");
+            string uniqueId = Guid.NewGuid().ToString("N").Substring(0, 8);
+            string tempPath = Path.Combine(tempDir, $"TestPattern_{cardTitle}_{width}x{height}_{uniqueId}.png");
 
             using (var fileStream = new FileStream(tempPath, FileMode.Create, FileAccess.Write))
             {

@@ -22,6 +22,11 @@ namespace RejiDisplay.Models
             if (currentSignalWidth > 0) GpuSignalWidth = currentSignalWidth;
             if (currentSignalHeight > 0) GpuSignalHeight = currentSignalHeight;
 
+            // Ensure logical LED dimensions remain positive and are never overwritten by GPU signal dimensions
+            if (LogicalLedWidth <= 0) LogicalLedWidth = 860;
+            if (LogicalLedHeight <= 0) LogicalLedHeight = 1720;
+
+            // Validate and clamp signal-space viewport bounds
             if (ViewportWidth <= 0 || ViewportWidth > GpuSignalWidth)
                 ViewportWidth = GpuSignalWidth;
 
@@ -54,3 +59,4 @@ namespace RejiDisplay.Models
         }
     }
 }
+

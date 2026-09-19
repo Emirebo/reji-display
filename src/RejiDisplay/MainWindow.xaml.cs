@@ -220,7 +220,8 @@ namespace RejiDisplay
             // Restore LEFT Card
             if (_appSettings.LeftOutput != null)
             {
-                _leftState.Calibration = _appSettings.LeftOutput.Calibration ?? new OutputCalibration();
+                _leftState.DraftCalibration = _appSettings.LeftOutput.Calibration ?? new OutputCalibration();
+                _leftState.LiveAppliedCalibration = _leftState.DraftCalibration.Clone();
                 _leftState.DraftLayout = _appSettings.LeftOutput.DraftLayout ?? new ImageLayoutState();
                 _leftState.LiveAppliedLayout = _appSettings.LeftOutput.LiveAppliedLayout ?? new ImageLayoutState();
                 _leftState.IsLiveUpdateEnabled = _appSettings.LeftOutput.IsLiveUpdateEnabled;
@@ -250,7 +251,8 @@ namespace RejiDisplay
             // Restore RIGHT Card
             if (_appSettings.RightOutput != null)
             {
-                _rightState.Calibration = _appSettings.RightOutput.Calibration ?? new OutputCalibration();
+                _rightState.DraftCalibration = _appSettings.RightOutput.Calibration ?? new OutputCalibration();
+                _rightState.LiveAppliedCalibration = _rightState.DraftCalibration.Clone();
                 _rightState.DraftLayout = _appSettings.RightOutput.DraftLayout ?? new ImageLayoutState();
                 _rightState.LiveAppliedLayout = _appSettings.RightOutput.LiveAppliedLayout ?? new ImageLayoutState();
                 _rightState.IsLiveUpdateEnabled = _appSettings.RightOutput.IsLiveUpdateEnabled;
@@ -420,20 +422,18 @@ namespace RejiDisplay
                 previewCanvas.Width = viewportW;
                 previewCanvas.Height = viewportH;
 
-                previewImg.Width = bitmap.PixelWidth;
-                previewImg.Height = bitmap.PixelHeight;
-
-                Canvas.SetLeft(previewImg, (viewportW - bitmap.PixelWidth) / 2.0);
-                Canvas.SetTop(previewImg, (viewportH - bitmap.PixelHeight) / 2.0);
-
-                var transform = LayoutTransformHelper.CalculateTransform(
+                var rect = LayoutTransformHelper.CalculateLayoutRect(
                     bitmap.PixelWidth,
                     bitmap.PixelHeight,
                     viewportW,
                     viewportH,
                     cardState.DraftLayout);
 
-                previewImg.RenderTransform = transform;
+                previewImg.Width = rect.Width;
+                previewImg.Height = rect.Height;
+                Canvas.SetLeft(previewImg, rect.Left);
+                Canvas.SetTop(previewImg, rect.Top);
+                previewImg.RenderTransform = Transform.Identity;
             }
         }
 
@@ -447,18 +447,37 @@ namespace RejiDisplay
             {
                 _appSettings.SelectedVenuePresetName = preset.Name;
 
-                _leftState.Calibration.LogicalLedWidth = preset.DefaultLeftLogicalWidth;
-                _leftState.Calibration.LogicalLedHeight = preset.DefaultLeftLogicalHeight;
+                _leftState.DraftCalibration.LogicalLedWidth = preset.DefaultLeftLogicalWidth;
+                _leftState.DraftCalibration.LogicalLedHeight = preset.DefaultLeftLogicalHeight;
 
-                _rightState.Calibration.LogicalLedWidth = preset.DefaultRightLogicalWidth;
-                _rightState.Calibration.LogicalLedHeight = preset.DefaultRightLogicalHeight;
+                _rightState.DraftCalibration.LogicalLedWidth = preset.DefaultRightLogicalWidth;
+                _rightState.DraftCalibration.LogicalLedHeight = preset.DefaultRightLogicalHeight;
 
                 SyncCardStateToUI("LEFT", _leftState);
                 SyncCardStateToUI("RIGHT", _rightState);
 
+                if (!string.IsNullOrEmpty(_leftState.DraftLayout.MediaPath) && _leftState.DraftLayout.MediaPath.Contains("TestPattern_"))
+                {
+                    GenerateAndApplyTestPattern("LEFT", _leftState, ImgLeftPreview, PanelLeftDropPrompt, TxtLeftMediaPath, TxtLeftError, BtnLeftRestoreMedia);
+                }
+                else
+                {
+                    RenderDraftPreview("LEFT");
+                }
+
+                if (!string.IsNullOrEmpty(_rightState.DraftLayout.MediaPath) && _rightState.DraftLayout.MediaPath.Contains("TestPattern_"))
+                {
+                    GenerateAndApplyTestPattern("RIGHT", _rightState, ImgRightPreview, PanelRightDropPrompt, TxtRightMediaPath, TxtRightError, BtnRightRestoreMedia);
+                }
+                else
+                {
+                    RenderDraftPreview("RIGHT");
+                }
+
                 SaveAppSettings();
-                RenderDraftPreview("LEFT");
-                RenderDraftPreview("RIGHT");
+
+                if (_leftState.IsLiveUpdateEnabled && _outputManager.IsOutputActive("LEFT")) ApplyDraftToLive("LEFT");
+                if (_rightState.IsLiveUpdateEnabled && _outputManager.IsOutputActive("RIGHT")) ApplyDraftToLive("RIGHT");
 
                 TxtGlobalStatus.Text = $"Venue Preset seçildi: {preset.Name}";
             }
@@ -874,8 +893,9 @@ namespace RejiDisplay
             var badgeTxt = (cardId == "LEFT") ? TxtLeftStatus : TxtRightStatus;
             var errorTxt = (cardId == "LEFT") ? TxtLeftError : TxtRightError;
 
-            // Atomically copy DraftLayout to LiveAppliedLayout
+            // Atomically copy DraftLayout and DraftCalibration to LiveApplied state
             cardState.LiveAppliedLayout = cardState.DraftLayout.Clone();
+            cardState.LiveAppliedCalibration = cardState.DraftCalibration.Clone();
 
             var display = GetSelectedDisplayFromCombo(combo);
             if (display == null)
@@ -892,8 +912,8 @@ namespace RejiDisplay
                 return;
             }
 
-            // Ensure calibration is validated against GPU signal bounds
-            cardState.Calibration.ValidateAndClamp(display.Width, display.Height);
+            // Ensure live applied calibration is validated against GPU signal bounds
+            cardState.LiveAppliedCalibration.ValidateAndClamp(display.Width, display.Height);
 
             BitmapImage? bitmap = null;
             if (!string.IsNullOrEmpty(cardState.LiveAppliedLayout.MediaPath))
@@ -905,11 +925,11 @@ namespace RejiDisplay
             {
                 if (_outputManager.IsOutputActive(cardId))
                 {
-                    _outputManager.UpdateLiveOutput(cardId, cardState.Calibration, cardState.LiveAppliedLayout, bitmap, cardState.IsBlackout);
+                    _outputManager.UpdateLiveOutput(cardId, cardState.LiveAppliedCalibration, cardState.LiveAppliedLayout, bitmap, cardState.IsBlackout);
                 }
                 else
                 {
-                    _outputManager.StartOutput(cardId, display, cardState.Calibration, cardState.LiveAppliedLayout, bitmap, cardState.IsBlackout);
+                    _outputManager.StartOutput(cardId, display, cardState.LiveAppliedCalibration, cardState.LiveAppliedLayout, bitmap, cardState.IsBlackout);
                 }
 
                 cardState.IsActive = true;
@@ -1030,39 +1050,89 @@ namespace RejiDisplay
         {
             if (_isInitializing || _isUpdatingUI || _leftState == null) return;
 
-            if (int.TryParse(TxtLeftLedW.Text, out int w) && w > 0) _leftState.Calibration.LogicalLedWidth = w;
-            if (int.TryParse(TxtLeftLedH.Text, out int h) && h > 0) _leftState.Calibration.LogicalLedHeight = h;
-            if (int.TryParse(TxtLeftVpX.Text, out int vx)) _leftState.Calibration.ViewportX = vx;
-            if (int.TryParse(TxtLeftVpY.Text, out int vy)) _leftState.Calibration.ViewportY = vy;
+            int oldW = _leftState.DraftCalibration.LogicalLedWidth;
+            int oldH = _leftState.DraftCalibration.LogicalLedHeight;
+
+            if (int.TryParse(TxtLeftLedW.Text, out int w) && w > 0) _leftState.DraftCalibration.LogicalLedWidth = w;
+            else TxtLeftLedW.Text = _leftState.DraftCalibration.LogicalLedWidth.ToString();
+
+            if (int.TryParse(TxtLeftLedH.Text, out int h) && h > 0) _leftState.DraftCalibration.LogicalLedHeight = h;
+            else TxtLeftLedH.Text = _leftState.DraftCalibration.LogicalLedHeight.ToString();
+
+            if (int.TryParse(TxtLeftVpX.Text, out int vx)) _leftState.DraftCalibration.ViewportX = vx;
+            else TxtLeftVpX.Text = _leftState.DraftCalibration.ViewportX.ToString();
+
+            if (int.TryParse(TxtLeftVpY.Text, out int vy)) _leftState.DraftCalibration.ViewportY = vy;
+            else TxtLeftVpY.Text = _leftState.DraftCalibration.ViewportY.ToString();
+
+            bool dimensionsChanged = (_leftState.DraftCalibration.LogicalLedWidth != oldW || _leftState.DraftCalibration.LogicalLedHeight != oldH);
+
+            if (dimensionsChanged && !string.IsNullOrEmpty(_leftState.DraftLayout.MediaPath) && _leftState.DraftLayout.MediaPath.Contains("TestPattern_"))
+            {
+                GenerateAndApplyTestPattern("LEFT", _leftState, ImgLeftPreview, PanelLeftDropPrompt, TxtLeftMediaPath, TxtLeftError, BtnLeftRestoreMedia);
+            }
+            else
+            {
+                RenderDraftPreview("LEFT");
+            }
 
             SaveAppSettings();
-            RenderDraftPreview("LEFT");
+
+            if (_leftState.IsLiveUpdateEnabled && _outputManager.IsOutputActive("LEFT"))
+            {
+                ApplyDraftToLive("LEFT");
+            }
         }
 
         private void TxtRightCalibration_LostFocus(object sender, RoutedEventArgs e)
         {
             if (_isInitializing || _isUpdatingUI || _rightState == null) return;
 
-            if (int.TryParse(TxtRightLedW.Text, out int w) && w > 0) _rightState.Calibration.LogicalLedWidth = w;
-            if (int.TryParse(TxtRightLedH.Text, out int h) && h > 0) _rightState.Calibration.LogicalLedHeight = h;
-            if (int.TryParse(TxtRightVpX.Text, out int vx)) _rightState.Calibration.ViewportX = vx;
-            if (int.TryParse(TxtRightVpY.Text, out int vy)) _rightState.Calibration.ViewportY = vy;
+            int oldW = _rightState.DraftCalibration.LogicalLedWidth;
+            int oldH = _rightState.DraftCalibration.LogicalLedHeight;
+
+            if (int.TryParse(TxtRightLedW.Text, out int w) && w > 0) _rightState.DraftCalibration.LogicalLedWidth = w;
+            else TxtRightLedW.Text = _rightState.DraftCalibration.LogicalLedWidth.ToString();
+
+            if (int.TryParse(TxtRightLedH.Text, out int h) && h > 0) _rightState.DraftCalibration.LogicalLedHeight = h;
+            else TxtRightLedH.Text = _rightState.DraftCalibration.LogicalLedHeight.ToString();
+
+            if (int.TryParse(TxtRightVpX.Text, out int vx)) _rightState.DraftCalibration.ViewportX = vx;
+            else TxtRightVpX.Text = _rightState.DraftCalibration.ViewportX.ToString();
+
+            if (int.TryParse(TxtRightVpY.Text, out int vy)) _rightState.DraftCalibration.ViewportY = vy;
+            else TxtRightVpY.Text = _rightState.DraftCalibration.ViewportY.ToString();
+
+            bool dimensionsChanged = (_rightState.DraftCalibration.LogicalLedWidth != oldW || _rightState.DraftCalibration.LogicalLedHeight != oldH);
+
+            if (dimensionsChanged && !string.IsNullOrEmpty(_rightState.DraftLayout.MediaPath) && _rightState.DraftLayout.MediaPath.Contains("TestPattern_"))
+            {
+                GenerateAndApplyTestPattern("RIGHT", _rightState, ImgRightPreview, PanelRightDropPrompt, TxtRightMediaPath, TxtRightError, BtnRightRestoreMedia);
+            }
+            else
+            {
+                RenderDraftPreview("RIGHT");
+            }
 
             SaveAppSettings();
-            RenderDraftPreview("RIGHT");
+
+            if (_rightState.IsLiveUpdateEnabled && _outputManager.IsOutputActive("RIGHT"))
+            {
+                ApplyDraftToLive("RIGHT");
+            }
         }
 
         private void SaveAppSettings()
         {
             if (_isInitializing || _isUpdatingUI || _settingsService == null || _appSettings == null) return;
 
-            _appSettings.LeftOutput.Calibration = _leftState.Calibration;
+            _appSettings.LeftOutput.Calibration = _leftState.DraftCalibration;
             _appSettings.LeftOutput.DraftLayout = _leftState.DraftLayout;
             _appSettings.LeftOutput.LiveAppliedLayout = _leftState.LiveAppliedLayout;
             _appSettings.LeftOutput.IsLiveUpdateEnabled = _leftState.IsLiveUpdateEnabled;
             _appSettings.LeftOutput.IsBlackout = _leftState.IsBlackout;
 
-            _appSettings.RightOutput.Calibration = _rightState.Calibration;
+            _appSettings.RightOutput.Calibration = _rightState.DraftCalibration;
             _appSettings.RightOutput.DraftLayout = _rightState.DraftLayout;
             _appSettings.RightOutput.LiveAppliedLayout = _rightState.LiveAppliedLayout;
             _appSettings.RightOutput.IsLiveUpdateEnabled = _rightState.IsLiveUpdateEnabled;

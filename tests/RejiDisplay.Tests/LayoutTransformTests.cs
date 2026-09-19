@@ -95,5 +95,118 @@ namespace RejiDisplay.Tests
             Assert.Equal(1720, calib.LogicalLedHeight);
             Assert.Equal(1920, calib.ViewportWidth);
         }
+
+        [Fact]
+        public void CalculateLayoutRect_FitMode_PortraitImage_NoTopBottomCropping()
+        {
+            var layout = new ImageLayoutState
+            {
+                ScaleMode = ScaleMode.Fit,
+                Zoom = 1.0,
+                OffsetX = 0,
+                OffsetY = 0
+            };
+
+            // 860x1720 portrait poster into 1920x1080 landscape viewport
+            var rect = LayoutTransformHelper.CalculateLayoutRect(860, 1720, 1920, 1080, layout);
+
+            // Fit scale ratio = 1080 / 1720 = 0.6279069767
+            double expectedWidth = 860.0 * (1080.0 / 1720.0); // 540.0
+            double expectedHeight = 1080.0;
+            double expectedLeft = (1920.0 - expectedWidth) / 2.0; // 690.0
+            double expectedTop = 0.0;
+
+            Assert.Equal(expectedWidth, rect.Width, precision: 4);
+            Assert.Equal(expectedHeight, rect.Height, precision: 4);
+            Assert.Equal(expectedLeft, rect.Left, precision: 4);
+            Assert.Equal(expectedTop, rect.Top, precision: 4);
+
+            // Verify all 4 corners lie strictly within 1920x1080 viewport bounds
+            Assert.True(rect.Top >= 0.0, "Top edge must be >= 0");
+            Assert.True(rect.Top + rect.Height <= 1080.0001, "Bottom edge must be <= viewport height");
+            Assert.True(rect.Left >= 0.0, "Left edge must be >= 0");
+            Assert.True(rect.Left + rect.Width <= 1920.0001, "Right edge must be <= viewport width");
+        }
+
+        [Fact]
+        public void CalculateLayoutRect_FitMode_PortraitImage_On4KSignal_NoTopBottomCropping()
+        {
+            var layout = new ImageLayoutState
+            {
+                ScaleMode = ScaleMode.Fit,
+                Zoom = 1.0,
+                OffsetX = 0,
+                OffsetY = 0
+            };
+
+            // 860x1720 portrait poster into 3840x2160 (4K) viewport
+            var rect = LayoutTransformHelper.CalculateLayoutRect(860, 1720, 3840, 2160, layout);
+
+            Assert.Equal(2160.0, rect.Height, precision: 4);
+            Assert.Equal(0.0, rect.Top, precision: 4);
+            Assert.True(rect.Left >= 0.0);
+            Assert.True(rect.Left + rect.Width <= 3840.0001);
+        }
+
+        [Fact]
+        public void CalculateLayoutRect_FillMode_FillsEntireViewport()
+        {
+            var layout = new ImageLayoutState
+            {
+                ScaleMode = ScaleMode.Fill,
+                Zoom = 1.0,
+                OffsetX = 0,
+                OffsetY = 0
+            };
+
+            var rect = LayoutTransformHelper.CalculateLayoutRect(860, 1720, 1920, 1080, layout);
+
+            Assert.True(rect.Width >= 1920.0, "Fill mode width must cover viewport width");
+            Assert.True(rect.Height >= 1080.0, "Fill mode height must cover viewport height");
+        }
+
+        [Fact]
+        public void CalculateLayoutRect_StretchMode_MatchesViewportDimensions()
+        {
+            var layout = new ImageLayoutState
+            {
+                ScaleMode = ScaleMode.Stretch,
+                Zoom = 1.0,
+                OffsetX = 0,
+                OffsetY = 0
+            };
+
+            var rect = LayoutTransformHelper.CalculateLayoutRect(860, 1720, 1920, 1080, layout);
+
+            Assert.Equal(1920.0, rect.Width, precision: 4);
+            Assert.Equal(1080.0, rect.Height, precision: 4);
+            Assert.Equal(0.0, rect.Left, precision: 4);
+            Assert.Equal(0.0, rect.Top, precision: 4);
+        }
+
+        [Fact]
+        public void CalculateLayoutRect_CustomMode_ZoomAndOffsetsAreIndependent()
+        {
+            var layout = new ImageLayoutState
+            {
+                ScaleMode = ScaleMode.Custom,
+                Zoom = 1.5,
+                OffsetX = 30,
+                OffsetY = -20
+            };
+
+            var rect = LayoutTransformHelper.CalculateLayoutRect(860, 1720, 1920, 1080, layout);
+
+            double baseWidth = 860.0 * (1080.0 / 1720.0); // 540.0
+            double expectedWidth = baseWidth * 1.5; // 810.0
+            double expectedHeight = 1080.0 * 1.5; // 1620.0
+            double expectedLeft = (1920.0 - expectedWidth) / 2.0 + 30; // 585.0
+            double expectedTop = (1080.0 - expectedHeight) / 2.0 - 20; // -290.0
+
+            Assert.Equal(expectedWidth, rect.Width, precision: 4);
+            Assert.Equal(expectedHeight, rect.Height, precision: 4);
+            Assert.Equal(expectedLeft, rect.Left, precision: 4);
+            Assert.Equal(expectedTop, rect.Top, precision: 4);
+        }
     }
 }

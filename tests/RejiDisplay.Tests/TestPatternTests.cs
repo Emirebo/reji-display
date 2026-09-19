@@ -65,5 +65,33 @@ namespace RejiDisplay.Tests
             Assert.Equal(@"C:\images\original_artwork.png", cardState.DraftLayout.MediaPath);
             Assert.Null(cardState.PreviousMediaPath);
         }
+
+        [Fact]
+        public void SaveTestPatternToTempFile_GeneratesUniqueFilenamesToAvoidCaching()
+        {
+            string file1 = TestPatternGenerator.SaveTestPatternToTempFile("LEFT LED", 860, 1720);
+            string file2 = TestPatternGenerator.SaveTestPatternToTempFile("LEFT LED", 860, 1720);
+
+            try
+            {
+                Assert.NotEqual(file1, file2);
+            }
+            finally
+            {
+                if (File.Exists(file1)) File.Delete(file1);
+                if (File.Exists(file2)) File.Delete(file2);
+            }
+        }
+
+        [Fact]
+        public void NovaStarPreset_Retains860x1720LogicalDimensions()
+        {
+            var preset = VenuePreset.NovaStarVX2000ProStandard;
+
+            Assert.Equal(860, preset.DefaultLeftLogicalWidth);
+            Assert.Equal(1720, preset.DefaultLeftLogicalHeight);
+            Assert.Equal(860, preset.DefaultRightLogicalWidth);
+            Assert.Equal(1720, preset.DefaultRightLogicalHeight);
+        }
     }
 }
