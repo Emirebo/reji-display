@@ -27,3 +27,7 @@ Desktop.ini
 *.tmp
 *.bak
 *.cache
+
+# Release Publish Output
+artifacts/
+publish/
