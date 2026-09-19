@@ -331,7 +331,7 @@
                                     <TextBlock Text="Medya dosyasını (Görsel/Video) sürükleyin" FontWeight="Bold" FontSize="12" Foreground="{StaticResource TextPrimary}" HorizontalAlignment="Center"/>
                                 </StackPanel>
                                 <Image x:Name="ImgLeftPreview" Visibility="Collapsed" RenderTransformOrigin="0.5,0.5"/>
-                                <MediaElement x:Name="MediaLeftPreviewVideo" Visibility="Collapsed" LoadedBehavior="Manual" UnloadedBehavior="Manual" IsMuted="True" Volume="0"/>
+                                <MediaElement x:Name="MediaLeftPreviewVideo" Visibility="Collapsed" LoadedBehavior="Manual" UnloadedBehavior="Manual" IsMuted="True" Volume="0" MediaOpened="MediaLeftPreviewVideo_MediaOpened"/>
                             </Canvas>
                         </Border>
 
@@ -530,7 +530,7 @@
                                     <TextBlock Text="Medya dosyasını (Görsel/Video) sürükleyin" FontWeight="Bold" FontSize="12" Foreground="{StaticResource TextPrimary}" HorizontalAlignment="Center"/>
                                 </StackPanel>
                                 <Image x:Name="ImgRightPreview" Visibility="Collapsed" RenderTransformOrigin="0.5,0.5"/>
-                                <MediaElement x:Name="MediaRightPreviewVideo" Visibility="Collapsed" LoadedBehavior="Manual" UnloadedBehavior="Manual" IsMuted="True" Volume="0"/>
+                                <MediaElement x:Name="MediaRightPreviewVideo" Visibility="Collapsed" LoadedBehavior="Manual" UnloadedBehavior="Manual" IsMuted="True" Volume="0" MediaOpened="MediaRightPreviewVideo_MediaOpened"/>
                             </Canvas>
                         </Border>
 

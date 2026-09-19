@@ -407,35 +407,53 @@ namespace RejiDisplay
         {
             var cardState = (cardId == "LEFT") ? _leftState : _rightState;
             var previewImg = (cardId == "LEFT") ? ImgLeftPreview : ImgRightPreview;
+            var previewVideo = (cardId == "LEFT") ? MediaLeftPreviewVideo : MediaRightPreviewVideo;
             var previewCanvas = (cardId == "LEFT") ? CanvasLeftPreviewViewport : CanvasRightPreviewViewport;
 
-            if (previewImg == null || previewCanvas == null) return;
+            if (previewCanvas == null) return;
 
-            if (previewImg.Source is BitmapImage bitmap && bitmap.PixelWidth > 0 && bitmap.PixelHeight > 0)
+            // Constrain viewport box in control panel to 140x170 px
+            double maxW = 140;
+            double maxH = 170;
+
+            double viewportW = maxW;
+            double viewportH = maxH;
+
+            if (cardState.Calibration.LogicalLedWidth > 0 && cardState.Calibration.LogicalLedHeight > 0)
             {
-                // Constrain viewport box in control panel to 140x170 px
-                double maxW = 140;
-                double maxH = 170;
-
-                double viewportW = maxW;
-                double viewportH = maxH;
-
-                if (cardState.Calibration.LogicalLedWidth > 0 && cardState.Calibration.LogicalLedHeight > 0)
+                double aspect = (double)cardState.Calibration.LogicalLedWidth / cardState.Calibration.LogicalLedHeight;
+                if (aspect > 1.0)
                 {
-                    double aspect = (double)cardState.Calibration.LogicalLedWidth / cardState.Calibration.LogicalLedHeight;
-                    if (aspect > 1.0)
-                    {
-                        viewportH = maxW / aspect;
-                    }
-                    else
-                    {
-                        viewportW = maxH * aspect;
-                    }
+                    viewportH = maxW / aspect;
                 }
+                else
+                {
+                    viewportW = maxH * aspect;
+                }
+            }
 
-                previewCanvas.Width = viewportW;
-                previewCanvas.Height = viewportH;
+            previewCanvas.Width = viewportW;
+            previewCanvas.Height = viewportH;
 
+            if (cardState.DraftLayout.MediaSource.Type == MediaSourceType.Video && previewVideo != null && previewVideo.Visibility == Visibility.Visible)
+            {
+                double vidW = previewVideo.NaturalVideoWidth > 0 ? previewVideo.NaturalVideoWidth : 1920;
+                double vidH = previewVideo.NaturalVideoHeight > 0 ? previewVideo.NaturalVideoHeight : 1080;
+
+                var rect = LayoutTransformHelper.CalculateLayoutRect(
+                    vidW,
+                    vidH,
+                    viewportW,
+                    viewportH,
+                    cardState.DraftLayout);
+
+                previewVideo.Width = rect.Width;
+                previewVideo.Height = rect.Height;
+                Canvas.SetLeft(previewVideo, rect.Left);
+                Canvas.SetTop(previewVideo, rect.Top);
+            }
+            else if (previewImg != null && previewImg.Source is BitmapImage bitmap && bitmap.PixelWidth > 0 && bitmap.PixelHeight > 0)
+            {
                 var rect = LayoutTransformHelper.CalculateLayoutRect(
                     bitmap.PixelWidth,
                     bitmap.PixelHeight,
@@ -449,6 +467,16 @@ namespace RejiDisplay
                 Canvas.SetTop(previewImg, rect.Top);
                 previewImg.RenderTransform = Transform.Identity;
             }
+        }
+
+        private void MediaLeftPreviewVideo_MediaOpened(object sender, RoutedEventArgs e)
+        {
+            RenderDraftPreview("LEFT");
+        }
+
+        private void MediaRightPreviewVideo_MediaOpened(object sender, RoutedEventArgs e)
+        {
+            RenderDraftPreview("RIGHT");
         }
 
         // --- Event Handlers ---

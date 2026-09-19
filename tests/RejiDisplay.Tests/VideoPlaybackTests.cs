@@ -145,5 +145,19 @@ namespace RejiDisplay.Tests
             Assert.Equal(expectedLeft, rect.Left, precision: 4);
             Assert.Equal(0.0, rect.Top, precision: 4);
         }
+
+        [Fact]
+        public void MediaValidationHelper_ValidatesRealLocalVideoFile_IfAvailable()
+        {
+            string realVideoPath = @"C:\Users\Emir\Videos\Kısa versiyon.mp4";
+            if (File.Exists(realVideoPath))
+            {
+                bool valid = MediaValidationHelper.ValidateMediaFile(realVideoPath, out string error);
+                Assert.True(valid, $"Validation failed for existing video: {error}");
+                var mediaSource = MediaSource.FromFile(realVideoPath);
+                Assert.Equal(MediaSourceType.Video, mediaSource.Type);
+                Assert.Equal("Kısa versiyon.mp4", mediaSource.DisplayName);
+            }
+        }
     }
 }
