@@ -63,5 +63,34 @@ namespace RejiDisplay.Helpers
             errorMessage = $"Desteklenmeyen dosya formatı '{ext}'. (Desteklenenler: PNG, JPG, WEBP, BMP, MP4, MOV, MKV, WEBM, AVI, WMV)";
             return false;
         }
+
+        public static bool ValidateUrl(string? urlInput, out string formattedUrl, out string errorMessage)
+        {
+            errorMessage = string.Empty;
+            formattedUrl = string.Empty;
+
+            if (string.IsNullOrWhiteSpace(urlInput))
+            {
+                errorMessage = "Lütfen geçerli bir web adresi (URL) girin.";
+                return false;
+            }
+
+            string input = urlInput.Trim();
+            if (!input.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
+                !input.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            {
+                input = "https://" + input;
+            }
+
+            if (Uri.TryCreate(input, UriKind.Absolute, out Uri? uriResult) &&
+                (uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps))
+            {
+                formattedUrl = uriResult.AbsoluteUri;
+                return true;
+            }
+
+            errorMessage = "Geçersiz web URL formatı. Örnek: https://subtitles.live.com";
+            return false;
+        }
     }
 }

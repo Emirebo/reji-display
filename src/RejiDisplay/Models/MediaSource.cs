@@ -16,6 +16,13 @@ namespace RejiDisplay.Models
                 return new MediaSource { Type = MediaSourceType.None };
             }
 
+            if (path.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                path.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ||
+                path.StartsWith("www.", StringComparison.OrdinalIgnoreCase))
+            {
+                return FromUrl(path);
+            }
+
             string fileName = Path.GetFileName(path);
             if (fileName.StartsWith("TestPattern_", StringComparison.OrdinalIgnoreCase))
             {
@@ -43,6 +50,37 @@ namespace RejiDisplay.Models
                 Type = MediaSourceType.Image,
                 FilePath = path,
                 DisplayName = fileName
+            };
+        }
+
+        public static MediaSource FromUrl(string url)
+        {
+            if (string.IsNullOrWhiteSpace(url))
+            {
+                return new MediaSource { Type = MediaSourceType.None };
+            }
+
+            string formattedUrl = url.Trim();
+            if (formattedUrl.StartsWith("www.", StringComparison.OrdinalIgnoreCase))
+            {
+                formattedUrl = "https://" + formattedUrl;
+            }
+
+            string displayName = formattedUrl;
+            try
+            {
+                if (Uri.TryCreate(formattedUrl, UriKind.Absolute, out Uri? uri))
+                {
+                    displayName = uri.Host;
+                }
+            }
+            catch { }
+
+            return new MediaSource
+            {
+                Type = MediaSourceType.Website,
+                FilePath = formattedUrl,
+                DisplayName = displayName
             };
         }
 

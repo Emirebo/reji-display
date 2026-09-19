@@ -29,6 +29,7 @@ namespace RejiDisplay
         private AppSettings _appSettings = new();
         private bool _isInitializing = true;
         private bool _isUpdatingUI = false;
+        private readonly System.Windows.Threading.DispatcherTimer _videoTimer;
 
         public MainWindow()
         {
@@ -39,6 +40,13 @@ namespace RejiDisplay
             _venuePresetService = new VenuePresetService();
 
             InitializeComponent();
+
+            _videoTimer = new System.Windows.Threading.DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(500)
+            };
+            _videoTimer.Tick += VideoTimer_Tick;
+            _videoTimer.Start();
 
             _displayService.DisplayTopologyChanged += OnDisplayTopologyChanged;
 
@@ -309,7 +317,16 @@ namespace RejiDisplay
                     TxtLeftVpY.Text = state.Calibration.ViewportY.ToString();
 
                     bool isVideo = (state.DraftLayout.MediaSource.Type == MediaSourceType.Video);
+                    bool isWeb = (state.DraftLayout.MediaSource.Type == MediaSourceType.Website);
+
                     PanelLeftVideoControls.Visibility = isVideo ? Visibility.Visible : Visibility.Collapsed;
+                    PanelLeftWebControls.Visibility = isWeb ? Visibility.Visible : Visibility.Collapsed;
+                    if (isWeb)
+                    {
+                        TxtLeftWebUrl.Text = state.DraftLayout.WebsiteState.Url;
+                        ChkLeftWebMute.IsChecked = state.DraftLayout.WebsiteState.IsMuted;
+                    }
+
                     ChkLeftLoop.IsChecked = state.DraftLayout.VideoState.IsLooping;
                     ChkLeftMute.IsChecked = state.DraftLayout.VideoState.IsMuted;
                     SliderLeftVolume.Value = state.DraftLayout.VideoState.Volume * 100.0;
@@ -339,7 +356,16 @@ namespace RejiDisplay
                     TxtRightVpY.Text = state.Calibration.ViewportY.ToString();
 
                     bool isVideo = (state.DraftLayout.MediaSource.Type == MediaSourceType.Video);
+                    bool isWeb = (state.DraftLayout.MediaSource.Type == MediaSourceType.Website);
+
                     PanelRightVideoControls.Visibility = isVideo ? Visibility.Visible : Visibility.Collapsed;
+                    PanelRightWebControls.Visibility = isWeb ? Visibility.Visible : Visibility.Collapsed;
+                    if (isWeb)
+                    {
+                        TxtRightWebUrl.Text = state.DraftLayout.WebsiteState.Url;
+                        ChkRightWebMute.IsChecked = state.DraftLayout.WebsiteState.IsMuted;
+                    }
+
                     ChkRightLoop.IsChecked = state.DraftLayout.VideoState.IsLooping;
                     ChkRightMute.IsChecked = state.DraftLayout.VideoState.IsMuted;
                     SliderRightVolume.Value = state.DraftLayout.VideoState.Volume * 100.0;
@@ -408,6 +434,7 @@ namespace RejiDisplay
             var cardState = (cardId == "LEFT") ? _leftState : _rightState;
             var previewImg = (cardId == "LEFT") ? ImgLeftPreview : ImgRightPreview;
             var previewVideo = (cardId == "LEFT") ? MediaLeftPreviewVideo : MediaRightPreviewVideo;
+            var previewWeb = (cardId == "LEFT") ? MediaLeftPreviewWeb : MediaRightPreviewWeb;
             var previewCanvas = (cardId == "LEFT") ? CanvasLeftPreviewViewport : CanvasRightPreviewViewport;
 
             if (previewCanvas == null) return;
@@ -435,8 +462,30 @@ namespace RejiDisplay
             previewCanvas.Width = viewportW;
             previewCanvas.Height = viewportH;
 
-            if (cardState.DraftLayout.MediaSource.Type == MediaSourceType.Video && previewVideo != null && previewVideo.Visibility == Visibility.Visible)
+            if (cardState.DraftLayout.MediaSource.Type == MediaSourceType.Website && previewWeb != null)
             {
+                if (previewImg != null) previewImg.Visibility = Visibility.Collapsed;
+                if (previewVideo != null) previewVideo.Visibility = Visibility.Collapsed;
+                previewWeb.Visibility = Visibility.Visible;
+
+                double srcW = cardState.Calibration.LogicalLedWidth > 0 ? cardState.Calibration.LogicalLedWidth : viewportW;
+                double srcH = cardState.Calibration.LogicalLedHeight > 0 ? cardState.Calibration.LogicalLedHeight : viewportH;
+
+                var rect = LayoutTransformHelper.CalculateLayoutRect(
+                    srcW,
+                    srcH,
+                    viewportW,
+                    viewportH,
+                    cardState.DraftLayout);
+
+                previewWeb.Width = rect.Width;
+                previewWeb.Height = rect.Height;
+                Canvas.SetLeft(previewWeb, rect.Left);
+                Canvas.SetTop(previewWeb, rect.Top);
+            }
+            else if (cardState.DraftLayout.MediaSource.Type == MediaSourceType.Video && previewVideo != null && previewVideo.Visibility == Visibility.Visible)
+            {
+                if (previewWeb != null) previewWeb.Visibility = Visibility.Collapsed;
                 double vidW = previewVideo.NaturalVideoWidth > 0 ? previewVideo.NaturalVideoWidth : 1920;
                 double vidH = previewVideo.NaturalVideoHeight > 0 ? previewVideo.NaturalVideoHeight : 1080;
 
@@ -454,6 +503,7 @@ namespace RejiDisplay
             }
             else if (previewImg != null && previewImg.Source is BitmapImage bitmap && bitmap.PixelWidth > 0 && bitmap.PixelHeight > 0)
             {
+                if (previewWeb != null) previewWeb.Visibility = Visibility.Collapsed;
                 var rect = LayoutTransformHelper.CalculateLayoutRect(
                     bitmap.PixelWidth,
                     bitmap.PixelHeight,
@@ -691,6 +741,235 @@ namespace RejiDisplay
             }
         }
 
+        private void VideoTimer_Tick(object? sender, EventArgs e)
+        {
+            UpdateVideoProgressUI("LEFT", MediaLeftPreviewVideo, SliderLeftVideoPosition, TxtLeftVideoTime);
+            UpdateVideoProgressUI("RIGHT", MediaRightPreviewVideo, SliderRightVideoPosition, TxtRightVideoTime);
+        }
+
+        private void UpdateVideoProgressUI(string cardId, MediaElement mediaVideo, Slider slider, TextBlock timeText)
+        {
+            if (mediaVideo != null && mediaVideo.Visibility == Visibility.Visible && mediaVideo.NaturalDuration.HasTimeSpan && mediaVideo.NaturalDuration.TimeSpan.TotalSeconds > 0)
+            {
+                double totalSec = mediaVideo.NaturalDuration.TimeSpan.TotalSeconds;
+                double currentSec = mediaVideo.Position.TotalSeconds;
+
+                if (slider != null && !_isUpdatingUI)
+                {
+                    _isUpdatingUI = true;
+                    try
+                    {
+                        slider.Maximum = totalSec;
+                        slider.Value = currentSec;
+                    }
+                    finally
+                    {
+                        _isUpdatingUI = false;
+                    }
+                }
+
+                if (timeText != null)
+                {
+                    timeText.Text = $"{mediaVideo.Position:mm\\:ss} / {mediaVideo.NaturalDuration.TimeSpan:mm\\:ss}";
+                }
+            }
+        }
+
+        private void BtnLeftChooseWeb_Click(object sender, RoutedEventArgs e)
+        {
+            OpenWebPanelForCard("LEFT", _leftState, PanelLeftWebControls, TxtLeftWebUrl);
+        }
+
+        private void BtnRightChooseWeb_Click(object sender, RoutedEventArgs e)
+        {
+            OpenWebPanelForCard("RIGHT", _rightState, PanelRightWebControls, TxtRightWebUrl);
+        }
+
+        private void OpenWebPanelForCard(string cardId, OutputCardState cardState, Border webPanel, TextBox urlTxt)
+        {
+            if (cardId == "LEFT") PanelLeftVideoControls.Visibility = Visibility.Collapsed;
+            else PanelRightVideoControls.Visibility = Visibility.Collapsed;
+
+            webPanel.Visibility = Visibility.Visible;
+
+            if (string.IsNullOrWhiteSpace(urlTxt.Text) || urlTxt.Text == "https://subtitles.live.com")
+            {
+                if (!string.IsNullOrWhiteSpace(cardState.DraftLayout.WebsiteState.Url))
+                {
+                    urlTxt.Text = cardState.DraftLayout.WebsiteState.Url;
+                }
+            }
+        }
+
+        private void BtnLeftLoadWeb_Click(object sender, RoutedEventArgs e)
+        {
+            if (LoadWebForCard("LEFT", _leftState, TxtLeftWebUrl.Text))
+            {
+                SaveAppSettings();
+                if (_leftState.IsLiveUpdateEnabled && _outputManager.IsOutputActive("LEFT"))
+                {
+                    ApplyDraftToLive("LEFT");
+                }
+            }
+        }
+
+        private void BtnRightLoadWeb_Click(object sender, RoutedEventArgs e)
+        {
+            if (LoadWebForCard("RIGHT", _rightState, TxtRightWebUrl.Text))
+            {
+                SaveAppSettings();
+                if (_rightState.IsLiveUpdateEnabled && _outputManager.IsOutputActive("RIGHT"))
+                {
+                    ApplyDraftToLive("RIGHT");
+                }
+            }
+        }
+
+        private void BtnLeftRefreshWeb_Click(object sender, RoutedEventArgs e)
+        {
+            RefreshWebForCard("LEFT", _leftState, MediaLeftPreviewWeb);
+        }
+
+        private void BtnRightRefreshWeb_Click(object sender, RoutedEventArgs e)
+        {
+            RefreshWebForCard("RIGHT", _rightState, MediaRightPreviewWeb);
+        }
+
+        private void RefreshWebForCard(string cardId, OutputCardState cardState, Microsoft.Web.WebView2.Wpf.WebView2 webView)
+        {
+            try
+            {
+                if (webView != null && webView.CoreWebView2 != null)
+                {
+                    webView.Reload();
+                }
+
+                if (cardState.IsActive && _outputManager.IsOutputActive(cardId))
+                {
+                    ApplyDraftToLive(cardId);
+                }
+            }
+            catch (Exception ex)
+            {
+                TxtGlobalStatus.Text = $"Yenileme Hatası ({cardId}): {ex.Message}";
+            }
+        }
+
+        private void BtnLeftOpenExternalWeb_Click(object sender, RoutedEventArgs e)
+        {
+            OpenExternalBrowser(_leftState.DraftLayout.WebsiteState.Url);
+        }
+
+        private void BtnRightOpenExternalWeb_Click(object sender, RoutedEventArgs e)
+        {
+            OpenExternalBrowser(_rightState.DraftLayout.WebsiteState.Url);
+        }
+
+        private void OpenExternalBrowser(string url)
+        {
+            if (MediaValidationHelper.ValidateUrl(url, out string formattedUrl, out _))
+            {
+                try
+                {
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(formattedUrl) { UseShellExecute = true });
+                }
+                catch (Exception ex)
+                {
+                    TxtGlobalStatus.Text = $"Harici Tarayıcı Açma Hatası: {ex.Message}";
+                }
+            }
+        }
+
+        private void ChkLeftWebMute_Click(object sender, RoutedEventArgs e)
+        {
+            _leftState.DraftLayout.WebsiteState.IsMuted = (ChkLeftWebMute.IsChecked == true);
+            if (_leftState.IsActive && _leftState.IsLiveUpdateEnabled) ApplyDraftToLive("LEFT");
+        }
+
+        private void ChkRightWebMute_Click(object sender, RoutedEventArgs e)
+        {
+            _rightState.DraftLayout.WebsiteState.IsMuted = (ChkRightWebMute.IsChecked == true);
+            if (_rightState.IsActive && _rightState.IsLiveUpdateEnabled) ApplyDraftToLive("RIGHT");
+        }
+
+        private bool LoadWebForCard(string cardId, OutputCardState cardState, string urlInput)
+        {
+            var previewImg = (cardId == "LEFT") ? ImgLeftPreview : ImgRightPreview;
+            var previewVideo = (cardId == "LEFT") ? MediaLeftPreviewVideo : MediaRightPreviewVideo;
+            var previewWeb = (cardId == "LEFT") ? MediaLeftPreviewWeb : MediaRightPreviewWeb;
+            var promptPanel = (cardId == "LEFT") ? PanelLeftDropPrompt : PanelRightDropPrompt;
+            var mediaPathTxt = (cardId == "LEFT") ? TxtLeftMediaPath : TxtRightMediaPath;
+            var errorTxt = (cardId == "LEFT") ? TxtLeftError : TxtRightError;
+            var videoPanel = (cardId == "LEFT") ? PanelLeftVideoControls : PanelRightVideoControls;
+            var webPanel = (cardId == "LEFT") ? PanelLeftWebControls : PanelRightWebControls;
+            var webUrlTxt = (cardId == "LEFT") ? TxtLeftWebUrl : TxtRightWebUrl;
+            var webStatusTxt = (cardId == "LEFT") ? TxtLeftWebStatus : TxtRightWebStatus;
+
+            if (!MediaValidationHelper.ValidateUrl(urlInput, out string formattedUrl, out string err))
+            {
+                errorTxt.Text = $"HATA: {err}";
+                errorTxt.Visibility = Visibility.Visible;
+                if (webStatusTxt != null) webStatusTxt.Text = "Durum: Geçersiz URL";
+                return false;
+            }
+
+            try
+            {
+                var mediaSource = MediaSource.FromUrl(formattedUrl);
+                cardState.DraftLayout.MediaSource = mediaSource;
+                cardState.DraftLayout.WebsiteState.Url = formattedUrl;
+
+                previewImg.Visibility = Visibility.Collapsed;
+                previewImg.Source = null;
+
+                previewVideo.Stop();
+                previewVideo.Source = null;
+                previewVideo.Visibility = Visibility.Collapsed;
+
+                videoPanel.Visibility = Visibility.Collapsed;
+                webPanel.Visibility = Visibility.Visible;
+                promptPanel.Visibility = Visibility.Collapsed;
+
+                webUrlTxt.Text = formattedUrl;
+                mediaPathTxt.Text = $"🌐 {mediaSource.DisplayName}";
+                errorTxt.Visibility = Visibility.Collapsed;
+                if (webStatusTxt != null) webStatusTxt.Text = "Durum: Yükleniyor...";
+
+                _ = InitializeAndNavigatePreviewWebAsync(previewWeb, formattedUrl, cardState.DraftLayout.WebsiteState, webStatusTxt);
+
+                RenderDraftPreview(cardId);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                errorTxt.Text = $"Web Yükleme Hatası: {ex.Message}";
+                errorTxt.Visibility = Visibility.Visible;
+            }
+
+            return false;
+        }
+
+        private async System.Threading.Tasks.Task InitializeAndNavigatePreviewWebAsync(Microsoft.Web.WebView2.Wpf.WebView2 webView, string url, WebsiteState state, TextBlock? statusTxt)
+        {
+            try
+            {
+                webView.Visibility = Visibility.Visible;
+                await webView.EnsureCoreWebView2Async();
+                if (webView.CoreWebView2 != null)
+                {
+                    webView.CoreWebView2.IsMuted = state.IsMuted;
+                    webView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;
+                    if (state.ZoomFactor > 0) webView.ZoomFactor = state.ZoomFactor;
+                    webView.Source = new Uri(url);
+                }
+                if (statusTxt != null) statusTxt.Text = "Durum: Web Sitesi Yüklendi (Hazır)";
+            }
+            catch (Exception ex)
+            {
+                if (statusTxt != null) statusTxt.Text = $"Durum: Hata - {ex.Message}";
+            }
+        }
+
         private bool LoadMediaForCard(
             string cardId,
             OutputCardState cardState,
@@ -702,6 +981,15 @@ namespace RejiDisplay
             TextBlock errorTxt,
             Border videoControlsPanel)
         {
+            if (!string.IsNullOrWhiteSpace(filePath) &&
+                (filePath.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                 filePath.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ||
+                 filePath.StartsWith("www.", StringComparison.OrdinalIgnoreCase) ||
+                 cardState.DraftLayout.MediaSource.Type == MediaSourceType.Website))
+            {
+                return LoadWebForCard(cardId, cardState, filePath);
+            }
+
             if (!MediaValidationHelper.ValidateMediaFile(filePath, out string err))
             {
                 errorTxt.Text = $"HATA: {err}";

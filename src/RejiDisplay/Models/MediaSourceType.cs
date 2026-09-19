@@ -5,6 +5,7 @@ namespace RejiDisplay.Models
         None,
         Image,
         Video,
+        Website,
         TestPattern
     }
 }

@@ -23,6 +23,7 @@ namespace RejiDisplay.Models
         }
 
         public VideoPlaybackState VideoState { get; set; } = new();
+        public WebsiteState WebsiteState { get; set; } = new();
 
         public ScaleMode ScaleMode { get; set; } = ScaleMode.Fit;
         public double Zoom { get; set; } = 1.0; // 1.0 = 100% (range 0.1 to 4.0)
@@ -35,6 +36,7 @@ namespace RejiDisplay.Models
             {
                 MediaSource = this.MediaSource.Clone(),
                 VideoState = this.VideoState.Clone(),
+                WebsiteState = this.WebsiteState.Clone(),
                 ScaleMode = this.ScaleMode,
                 Zoom = this.Zoom,
                 OffsetX = this.OffsetX,
