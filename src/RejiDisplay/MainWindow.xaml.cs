@@ -18,6 +18,7 @@ namespace RejiDisplay
         private readonly DisplayService _displayService;
         private readonly SettingsService _settingsService;
         private readonly OutputManager _outputManager;
+        private readonly VenuePresetService _venuePresetService;
 
         private List<DisplayInfo> _allDisplays = new();
         private DisplayInfo? _reservedCenterDisplay;
@@ -26,12 +27,14 @@ namespace RejiDisplay
         private OutputCardState _rightState = new() { CardId = "RIGHT", Title = "RIGHT LED" };
 
         private AppSettings _appSettings = new();
+        private bool _isUpdatingUI = false;
 
         public MainWindow()
         {
             _displayService = new DisplayService();
             _settingsService = new SettingsService();
             _outputManager = new OutputManager();
+            _venuePresetService = new VenuePresetService();
 
             InitializeComponent();
 
@@ -43,9 +46,21 @@ namespace RejiDisplay
 
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
-            _appSettings = _settingsService.LoadSettings();
-            RefreshDisplaysAndUI();
-            RestoreSavedSettings();
+            _isUpdatingUI = true;
+            try
+            {
+                _appSettings = _settingsService.LoadSettings();
+                PopulateVenuePresets();
+                RefreshDisplaysAndUI();
+                RestoreSavedSettings();
+            }
+            finally
+            {
+                _isUpdatingUI = false;
+            }
+
+            RenderDraftPreview("LEFT");
+            RenderDraftPreview("RIGHT");
         }
 
         private void MainWindow_Unloaded(object sender, RoutedEventArgs e)
@@ -57,17 +72,44 @@ namespace RejiDisplay
         {
             Dispatcher.Invoke(() =>
             {
-                TxtGlobalStatus.Text = "Ekran yapısı değişti. Ekranlar yeniden taranıyor...";
+                TxtGlobalStatus.Text = "Ekran yapısı değişti. Ekranlar taranıyor...";
                 RefreshDisplaysAndUI();
                 VerifyActiveOutputsAfterTopologyChange();
             });
+        }
+
+        private void PopulateVenuePresets()
+        {
+            CmbVenuePresets.SelectionChanged -= CmbVenuePresets_SelectionChanged;
+            CmbVenuePresets.Items.Clear();
+
+            var presets = _venuePresetService.GetPresets();
+            foreach (var preset in presets)
+            {
+                CmbVenuePresets.Items.Add(new ComboBoxItem
+                {
+                    Content = preset.Name,
+                    Tag = preset
+                });
+            }
+
+            var selected = _venuePresetService.GetPresetByName(_appSettings.SelectedVenuePresetName) ?? VenuePreset.NovaStarVX2000ProStandard;
+            foreach (ComboBoxItem item in CmbVenuePresets.Items)
+            {
+                if (item.Tag is VenuePreset vp && string.Equals(vp.Name, selected.Name, StringComparison.OrdinalIgnoreCase))
+                {
+                    CmbVenuePresets.SelectedItem = item;
+                    break;
+                }
+            }
+
+            CmbVenuePresets.SelectionChanged += CmbVenuePresets_SelectionChanged;
         }
 
         private void RefreshDisplaysAndUI()
         {
             _allDisplays = _displayService.GetDisplays();
 
-            // Populate Reserved Center Combo (Can be Primary or Extended display designated as Center)
             CmbReservedCenter.SelectionChanged -= CmbReservedCenter_SelectionChanged;
             CmbReservedCenter.Items.Clear();
 
@@ -82,7 +124,6 @@ namespace RejiDisplay
                 });
             }
 
-            // Restore center display selection from settings or default
             if (!string.IsNullOrEmpty(_appSettings.ReservedCenterDeviceName) || !string.IsNullOrEmpty(_appSettings.ReservedCenterDeviceId))
             {
                 _reservedCenterDisplay = _displayService.FindMatchingDisplay(_allDisplays, _appSettings.ReservedCenterDeviceName, _appSettings.ReservedCenterDeviceId);
@@ -111,11 +152,6 @@ namespace RejiDisplay
 
         private void UpdateCardComboBoxes()
         {
-            // Populate LEFT and RIGHT dropdowns using strict protection rules:
-            // Rule 1: NO Primary Operator display allowed
-            // Rule 2: NO Reserved CENTER display allowed
-            // Rule 3: NO display already claimed by the other card allowed
-
             DisplayInfo? leftSelected = GetSelectedDisplayFromCombo(CmbLeftDisplay);
             DisplayInfo? rightSelected = GetSelectedDisplayFromCombo(CmbRightDisplay);
 
@@ -181,6 +217,11 @@ namespace RejiDisplay
             // Restore LEFT Card
             if (_appSettings.LeftOutput != null)
             {
+                _leftState.Calibration = _appSettings.LeftOutput.Calibration ?? new OutputCalibration();
+                _leftState.DraftLayout = _appSettings.LeftOutput.DraftLayout ?? new ImageLayoutState();
+                _leftState.LiveAppliedLayout = _appSettings.LeftOutput.LiveAppliedLayout ?? new ImageLayoutState();
+                _leftState.IsLiveUpdateEnabled = _appSettings.LeftOutput.IsLiveUpdateEnabled;
+
                 var match = _displayService.FindMatchingDisplay(_allDisplays, _appSettings.LeftOutput.DeviceName, _appSettings.LeftOutput.DeviceId);
                 if (match != null && !match.IsPrimary && (_reservedCenterDisplay == null || !_displayService.IsSameDisplay(match, _reservedCenterDisplay)))
                 {
@@ -191,21 +232,26 @@ namespace RejiDisplay
                 else if (!string.IsNullOrEmpty(_appSettings.LeftOutput.DeviceName))
                 {
                     SetCardStatus(_leftState, BadgeLeftStatus, TxtLeftStatus, "DISCONNECTED", Colors.OrangeRed);
-                    TxtLeftError.Text = "Kayıtlı ekran bulunamadı veya kullanılamıyor. Atama yapılması gerekiyor.";
+                    TxtLeftError.Text = "Kayıtlı ekran bulunamadı. Atama yapılması gerekiyor.";
                     TxtLeftError.Visibility = Visibility.Visible;
                 }
 
-                SetScaleModeUI("LEFT", _appSettings.LeftOutput.ScaleMode);
+                SyncCardStateToUI("LEFT", _leftState);
 
-                if (!string.IsNullOrEmpty(_appSettings.LeftOutput.LastMediaPath))
+                if (!string.IsNullOrEmpty(_leftState.DraftLayout.MediaPath))
                 {
-                    LoadImageForCard(_leftState, _appSettings.LeftOutput.LastMediaPath, ImgLeftPreview, PanelLeftDropPrompt, TxtLeftMediaPath, TxtLeftError);
+                    LoadImageForCard("LEFT", _leftState, _leftState.DraftLayout.MediaPath, ImgLeftPreview, PanelLeftDropPrompt, TxtLeftMediaPath, TxtLeftError);
                 }
             }
 
             // Restore RIGHT Card
             if (_appSettings.RightOutput != null)
             {
+                _rightState.Calibration = _appSettings.RightOutput.Calibration ?? new OutputCalibration();
+                _rightState.DraftLayout = _appSettings.RightOutput.DraftLayout ?? new ImageLayoutState();
+                _rightState.LiveAppliedLayout = _appSettings.RightOutput.LiveAppliedLayout ?? new ImageLayoutState();
+                _rightState.IsLiveUpdateEnabled = _appSettings.RightOutput.IsLiveUpdateEnabled;
+
                 var match = _displayService.FindMatchingDisplay(_allDisplays, _appSettings.RightOutput.DeviceName, _appSettings.RightOutput.DeviceId);
                 if (match != null && !match.IsPrimary && (_reservedCenterDisplay == null || !_displayService.IsSameDisplay(match, _reservedCenterDisplay)))
                 {
@@ -216,16 +262,74 @@ namespace RejiDisplay
                 else if (!string.IsNullOrEmpty(_appSettings.RightOutput.DeviceName))
                 {
                     SetCardStatus(_rightState, BadgeRightStatus, TxtRightStatus, "DISCONNECTED", Colors.OrangeRed);
-                    TxtRightError.Text = "Kayıtlı ekran bulunamadı veya kullanılamıyor. Atama yapılması gerekiyor.";
+                    TxtRightError.Text = "Kayıtlı ekran bulunamadı. Atama yapılması gerekiyor.";
                     TxtRightError.Visibility = Visibility.Visible;
                 }
 
-                SetScaleModeUI("RIGHT", _appSettings.RightOutput.ScaleMode);
+                SyncCardStateToUI("RIGHT", _rightState);
 
-                if (!string.IsNullOrEmpty(_appSettings.RightOutput.LastMediaPath))
+                if (!string.IsNullOrEmpty(_rightState.DraftLayout.MediaPath))
                 {
-                    LoadImageForCard(_rightState, _appSettings.RightOutput.LastMediaPath, ImgRightPreview, PanelRightDropPrompt, TxtRightMediaPath, TxtRightError);
+                    LoadImageForCard("RIGHT", _rightState, _rightState.DraftLayout.MediaPath, ImgRightPreview, PanelRightDropPrompt, TxtRightMediaPath, TxtRightError);
                 }
+            }
+        }
+
+        private void SyncCardStateToUI(string cardId, OutputCardState state)
+        {
+            _isUpdatingUI = true;
+            try
+            {
+                if (cardId == "LEFT")
+                {
+                    RadioLeftFit.IsChecked = (state.DraftLayout.ScaleMode == ScaleMode.Fit);
+                    RadioLeftFill.IsChecked = (state.DraftLayout.ScaleMode == ScaleMode.Fill);
+                    RadioLeftStretch.IsChecked = (state.DraftLayout.ScaleMode == ScaleMode.Stretch);
+                    RadioLeftCustom.IsChecked = (state.DraftLayout.ScaleMode == ScaleMode.Custom);
+
+                    SliderLeftZoom.Value = state.DraftLayout.Zoom * 100.0;
+                    TxtLeftZoom.Text = $"{(int)(state.DraftLayout.Zoom * 100.0)}%";
+
+                    SliderLeftOffsetX.Value = state.DraftLayout.OffsetX;
+                    TxtLeftOffsetX.Text = $"{(int)state.DraftLayout.OffsetX} px";
+
+                    SliderLeftOffsetY.Value = state.DraftLayout.OffsetY;
+                    TxtLeftOffsetY.Text = $"{(int)state.DraftLayout.OffsetY} px";
+
+                    ChkLeftLiveSync.IsChecked = state.IsLiveUpdateEnabled;
+
+                    TxtLeftLedW.Text = state.Calibration.LogicalLedWidth.ToString();
+                    TxtLeftLedH.Text = state.Calibration.LogicalLedHeight.ToString();
+                    TxtLeftVpX.Text = state.Calibration.ViewportX.ToString();
+                    TxtLeftVpY.Text = state.Calibration.ViewportY.ToString();
+                }
+                else
+                {
+                    RadioRightFit.IsChecked = (state.DraftLayout.ScaleMode == ScaleMode.Fit);
+                    RadioRightFill.IsChecked = (state.DraftLayout.ScaleMode == ScaleMode.Fill);
+                    RadioRightStretch.IsChecked = (state.DraftLayout.ScaleMode == ScaleMode.Stretch);
+                    RadioRightCustom.IsChecked = (state.DraftLayout.ScaleMode == ScaleMode.Custom);
+
+                    SliderRightZoom.Value = state.DraftLayout.Zoom * 100.0;
+                    TxtRightZoom.Text = $"{(int)(state.DraftLayout.Zoom * 100.0)}%";
+
+                    SliderRightOffsetX.Value = state.DraftLayout.OffsetX;
+                    TxtRightOffsetX.Text = $"{(int)state.DraftLayout.OffsetX} px";
+
+                    SliderRightOffsetY.Value = state.DraftLayout.OffsetY;
+                    TxtRightOffsetY.Text = $"{(int)state.DraftLayout.OffsetY} px";
+
+                    ChkRightLiveSync.IsChecked = state.IsLiveUpdateEnabled;
+
+                    TxtRightLedW.Text = state.Calibration.LogicalLedWidth.ToString();
+                    TxtRightLedH.Text = state.Calibration.LogicalLedHeight.ToString();
+                    TxtRightVpX.Text = state.Calibration.ViewportX.ToString();
+                    TxtRightVpY.Text = state.Calibration.ViewportY.ToString();
+                }
+            }
+            finally
+            {
+                _isUpdatingUI = false;
             }
         }
 
@@ -243,7 +347,6 @@ namespace RejiDisplay
 
         private void VerifyActiveOutputsAfterTopologyChange()
         {
-            // Verify LEFT output
             if (_outputManager.IsOutputActive("LEFT"))
             {
                 var activeDisplay = _outputManager.GetActiveDisplay("LEFT");
@@ -252,22 +355,14 @@ namespace RejiDisplay
                     var current = _displayService.FindMatchingDisplay(_allDisplays, activeDisplay.DeviceName, activeDisplay.DeviceId);
                     if (current == null)
                     {
-                        // Display disconnected! Stop output and report unavailable
                         _outputManager.StopOutput("LEFT");
                         SetCardStatus(_leftState, BadgeLeftStatus, TxtLeftStatus, "DISCONNECTED", Colors.Red);
                         TxtLeftError.Text = "Atanan fiziksel ekran bağlantısı kesildi! Çıkış durduruldu.";
                         TxtLeftError.Visibility = Visibility.Visible;
                     }
-                    else
-                    {
-                        // Reposition if bounds shifted
-                        _leftState.AssignedDeviceName = current.DeviceName;
-                        _leftState.AssignedDeviceId = current.DeviceId;
-                    }
                 }
             }
 
-            // Verify RIGHT output
             if (_outputManager.IsOutputActive("RIGHT"))
             {
                 var activeDisplay = _outputManager.GetActiveDisplay("RIGHT");
@@ -281,22 +376,94 @@ namespace RejiDisplay
                         TxtRightError.Text = "Atanan fiziksel ekran bağlantısı kesildi! Çıkış durduruldu.";
                         TxtRightError.Visibility = Visibility.Visible;
                     }
-                    else
-                    {
-                        _rightState.AssignedDeviceName = current.DeviceName;
-                        _rightState.AssignedDeviceId = current.DeviceId;
-                    }
                 }
             }
 
             UpdateCardComboBoxes();
         }
 
+        // --- Layout Preview Matrix Transform ---
+
+        private void RenderDraftPreview(string cardId)
+        {
+            var cardState = (cardId == "LEFT") ? _leftState : _rightState;
+            var previewImg = (cardId == "LEFT") ? ImgLeftPreview : ImgRightPreview;
+            var previewCanvas = (cardId == "LEFT") ? CanvasLeftPreviewViewport : CanvasRightPreviewViewport;
+
+            if (previewImg == null || previewCanvas == null) return;
+
+            if (previewImg.Source is BitmapImage bitmap && bitmap.PixelWidth > 0 && bitmap.PixelHeight > 0)
+            {
+                // Constrain viewport box in control panel to 140x170 px
+                double maxW = 140;
+                double maxH = 170;
+
+                double viewportW = maxW;
+                double viewportH = maxH;
+
+                if (cardState.Calibration.LogicalLedWidth > 0 && cardState.Calibration.LogicalLedHeight > 0)
+                {
+                    double aspect = (double)cardState.Calibration.LogicalLedWidth / cardState.Calibration.LogicalLedHeight;
+                    if (aspect > 1.0)
+                    {
+                        viewportH = maxW / aspect;
+                    }
+                    else
+                    {
+                        viewportW = maxH * aspect;
+                    }
+                }
+
+                previewCanvas.Width = viewportW;
+                previewCanvas.Height = viewportH;
+
+                previewImg.Width = bitmap.PixelWidth;
+                previewImg.Height = bitmap.PixelHeight;
+
+                Canvas.SetLeft(previewImg, (viewportW - bitmap.PixelWidth) / 2.0);
+                Canvas.SetTop(previewImg, (viewportH - bitmap.PixelHeight) / 2.0);
+
+                var transform = LayoutTransformHelper.CalculateTransform(
+                    bitmap.PixelWidth,
+                    bitmap.PixelHeight,
+                    viewportW,
+                    viewportH,
+                    cardState.DraftLayout);
+
+                previewImg.RenderTransform = transform;
+            }
+        }
+
         // --- Event Handlers ---
+
+        private void CmbVenuePresets_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_isUpdatingUI) return;
+
+            if (CmbVenuePresets.SelectedItem is ComboBoxItem item && item.Tag is VenuePreset preset)
+            {
+                _appSettings.SelectedVenuePresetName = preset.Name;
+
+                _leftState.Calibration.LogicalLedWidth = preset.DefaultLeftLogicalWidth;
+                _leftState.Calibration.LogicalLedHeight = preset.DefaultLeftLogicalHeight;
+
+                _rightState.Calibration.LogicalLedWidth = preset.DefaultRightLogicalWidth;
+                _rightState.Calibration.LogicalLedHeight = preset.DefaultRightLogicalHeight;
+
+                SyncCardStateToUI("LEFT", _leftState);
+                SyncCardStateToUI("RIGHT", _rightState);
+
+                SaveAppSettings();
+                RenderDraftPreview("LEFT");
+                RenderDraftPreview("RIGHT");
+
+                TxtGlobalStatus.Text = $"Venue Preset seçildi: {preset.Name}";
+            }
+        }
 
         private void CmbReservedCenter_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (_settingsService == null || _appSettings == null) return;
+            if (_isUpdatingUI || _settingsService == null || _appSettings == null) return;
 
             if (CmbReservedCenter.SelectedItem is ComboBoxItem item && item.Tag is DisplayInfo display)
             {
@@ -311,13 +478,13 @@ namespace RejiDisplay
                 _appSettings.ReservedCenterDeviceId = null;
             }
 
-            _settingsService.SaveSettings(_appSettings);
+            SaveAppSettings();
             UpdateCardComboBoxes();
         }
 
         private void CmbLeftDisplay_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (_settingsService == null || _appSettings?.LeftOutput == null || _leftState == null) return;
+            if (_isUpdatingUI || _settingsService == null || _appSettings?.LeftOutput == null || _leftState == null) return;
 
             var selected = GetSelectedDisplayFromCombo(CmbLeftDisplay);
             if (selected != null)
@@ -326,6 +493,8 @@ namespace RejiDisplay
                 _leftState.AssignedDeviceId = selected.DeviceId;
                 _appSettings.LeftOutput.DeviceName = selected.DeviceName;
                 _appSettings.LeftOutput.DeviceId = selected.DeviceId;
+
+                _leftState.Calibration.ValidateAndClamp(selected.Width, selected.Height);
                 TxtLeftError.Visibility = Visibility.Collapsed;
             }
             else
@@ -336,13 +505,13 @@ namespace RejiDisplay
                 _appSettings.LeftOutput.DeviceId = null;
             }
 
-            _settingsService.SaveSettings(_appSettings);
+            SaveAppSettings();
             UpdateCardComboBoxes();
         }
 
         private void CmbRightDisplay_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (_settingsService == null || _appSettings?.RightOutput == null || _rightState == null) return;
+            if (_isUpdatingUI || _settingsService == null || _appSettings?.RightOutput == null || _rightState == null) return;
 
             var selected = GetSelectedDisplayFromCombo(CmbRightDisplay);
             if (selected != null)
@@ -351,6 +520,8 @@ namespace RejiDisplay
                 _rightState.AssignedDeviceId = selected.DeviceId;
                 _appSettings.RightOutput.DeviceName = selected.DeviceName;
                 _appSettings.RightOutput.DeviceId = selected.DeviceId;
+
+                _rightState.Calibration.ValidateAndClamp(selected.Width, selected.Height);
                 TxtRightError.Visibility = Visibility.Collapsed;
             }
             else
@@ -361,7 +532,7 @@ namespace RejiDisplay
                 _appSettings.RightOutput.DeviceId = null;
             }
 
-            _settingsService.SaveSettings(_appSettings);
+            SaveAppSettings();
             UpdateCardComboBoxes();
         }
 
@@ -403,26 +574,15 @@ namespace RejiDisplay
                 if (files != null && files.Length > 0)
                 {
                     string filePath = files[0];
-                    if (LoadImageForCard(cardState, filePath, previewImg, promptPanel, mediaPathTxt, errorTxt))
+                    if (LoadImageForCard(cardId, cardState, filePath, previewImg, promptPanel, mediaPathTxt, errorTxt))
                     {
-                        if (cardId == "LEFT")
-                        {
-                            _appSettings.LeftOutput.LastMediaPath = filePath;
-                        }
-                        else
-                        {
-                            _appSettings.RightOutput.LastMediaPath = filePath;
-                        }
-                        _settingsService.SaveSettings(_appSettings);
+                        cardState.DraftLayout.MediaPath = filePath;
+                        SaveAppSettings();
+                        RenderDraftPreview(cardId);
 
-                        // If output currently active, update media live safely
-                        if (_outputManager.IsOutputActive(cardId))
+                        if (cardState.IsLiveUpdateEnabled && _outputManager.IsOutputActive(cardId))
                         {
-                            var bmp = CreateBitmap(filePath);
-                            if (bmp != null)
-                            {
-                                _outputManager.UpdateMedia(cardId, bmp, cardState.ScaleMode);
-                            }
+                            ApplyDraftToLive(cardId);
                         }
                     }
                 }
@@ -430,6 +590,7 @@ namespace RejiDisplay
         }
 
         private bool LoadImageForCard(
+            string cardId,
             OutputCardState cardState,
             string filePath,
             Image previewImg,
@@ -437,7 +598,6 @@ namespace RejiDisplay
             TextBlock mediaPathTxt,
             TextBlock errorTxt)
         {
-            // Requirement 9: Validate image files BEFORE replacing currently visible content
             if (!ImageValidationHelper.ValidateImageFile(filePath, out string err))
             {
                 errorTxt.Text = $"HATA: {err}";
@@ -450,12 +610,13 @@ namespace RejiDisplay
                 var bitmap = CreateBitmap(filePath);
                 if (bitmap != null)
                 {
-                    cardState.CurrentMediaPath = filePath;
+                    cardState.DraftLayout.MediaPath = filePath;
                     previewImg.Source = bitmap;
                     previewImg.Visibility = Visibility.Visible;
                     promptPanel.Visibility = Visibility.Collapsed;
                     mediaPathTxt.Text = Path.GetFileName(filePath);
                     errorTxt.Visibility = Visibility.Collapsed;
+                    RenderDraftPreview(cardId);
                     return true;
                 }
             }
@@ -477,7 +638,7 @@ namespace RejiDisplay
                 bitmap.UriSource = new Uri(filePath, UriKind.Absolute);
                 bitmap.CacheOption = BitmapCacheOption.OnLoad;
                 bitmap.EndInit();
-                bitmap.Freeze(); // Freeze for cross-thread performance
+                bitmap.Freeze();
                 return bitmap;
             }
             catch
@@ -486,78 +647,135 @@ namespace RejiDisplay
             }
         }
 
+        // --- Layout Control Handlers (Draft Edits) ---
+
         private void RadioLeftScale_Checked(object sender, RoutedEventArgs e)
         {
-            if (RadioLeftFit == null || _settingsService == null || _appSettings?.LeftOutput == null || _leftState == null) return;
+            if (_isUpdatingUI || RadioLeftFit == null || _leftState == null) return;
 
-            if (RadioLeftFit.IsChecked == true) _leftState.ScaleMode = ScaleMode.Fit;
-            else if (RadioLeftFill.IsChecked == true) _leftState.ScaleMode = ScaleMode.Fill;
-            else if (RadioLeftStretch.IsChecked == true) _leftState.ScaleMode = ScaleMode.Stretch;
+            if (RadioLeftFit.IsChecked == true) _leftState.DraftLayout.ScaleMode = ScaleMode.Fit;
+            else if (RadioLeftFill.IsChecked == true) _leftState.DraftLayout.ScaleMode = ScaleMode.Fill;
+            else if (RadioLeftStretch.IsChecked == true) _leftState.DraftLayout.ScaleMode = ScaleMode.Stretch;
+            else if (RadioLeftCustom.IsChecked == true) _leftState.DraftLayout.ScaleMode = ScaleMode.Custom;
 
-            _appSettings.LeftOutput.ScaleMode = _leftState.ScaleMode;
-            _settingsService.SaveSettings(_appSettings);
-
-            if (_outputManager != null && _outputManager.IsOutputActive("LEFT"))
-            {
-                _outputManager.UpdateScaleMode("LEFT", _leftState.ScaleMode);
-            }
+            OnDraftLayoutChanged("LEFT");
         }
 
         private void RadioRightScale_Checked(object sender, RoutedEventArgs e)
         {
-            if (RadioRightFit == null || _settingsService == null || _appSettings?.RightOutput == null || _rightState == null) return;
+            if (_isUpdatingUI || RadioRightFit == null || _rightState == null) return;
 
-            if (RadioRightFit.IsChecked == true) _rightState.ScaleMode = ScaleMode.Fit;
-            else if (RadioRightFill.IsChecked == true) _rightState.ScaleMode = ScaleMode.Fill;
-            else if (RadioRightStretch.IsChecked == true) _rightState.ScaleMode = ScaleMode.Stretch;
+            if (RadioRightFit.IsChecked == true) _rightState.DraftLayout.ScaleMode = ScaleMode.Fit;
+            else if (RadioRightFill.IsChecked == true) _rightState.DraftLayout.ScaleMode = ScaleMode.Fill;
+            else if (RadioRightStretch.IsChecked == true) _rightState.DraftLayout.ScaleMode = ScaleMode.Stretch;
+            else if (RadioRightCustom.IsChecked == true) _rightState.DraftLayout.ScaleMode = ScaleMode.Custom;
 
-            _appSettings.RightOutput.ScaleMode = _rightState.ScaleMode;
-            _settingsService.SaveSettings(_appSettings);
+            OnDraftLayoutChanged("RIGHT");
+        }
 
-            if (_outputManager != null && _outputManager.IsOutputActive("RIGHT"))
+        private void SliderLeftLayout_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            if (_isUpdatingUI || _leftState == null) return;
+
+            _leftState.DraftLayout.Zoom = SliderLeftZoom.Value / 100.0;
+            _leftState.DraftLayout.OffsetX = SliderLeftOffsetX.Value;
+            _leftState.DraftLayout.OffsetY = SliderLeftOffsetY.Value;
+
+            if (TxtLeftZoom != null) TxtLeftZoom.Text = $"{(int)SliderLeftZoom.Value}%";
+            if (TxtLeftOffsetX != null) TxtLeftOffsetX.Text = $"{(int)SliderLeftOffsetX.Value} px";
+            if (TxtLeftOffsetY != null) TxtLeftOffsetY.Text = $"{(int)SliderLeftOffsetY.Value} px";
+
+            OnDraftLayoutChanged("LEFT");
+        }
+
+        private void SliderRightLayout_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            if (_isUpdatingUI || _rightState == null) return;
+
+            _rightState.DraftLayout.Zoom = SliderRightZoom.Value / 100.0;
+            _rightState.DraftLayout.OffsetX = SliderRightOffsetX.Value;
+            _rightState.DraftLayout.OffsetY = SliderRightOffsetY.Value;
+
+            if (TxtRightZoom != null) TxtRightZoom.Text = $"{(int)SliderRightZoom.Value}%";
+            if (TxtRightOffsetX != null) TxtRightOffsetX.Text = $"{(int)SliderRightOffsetX.Value} px";
+            if (TxtRightOffsetY != null) TxtRightOffsetY.Text = $"{(int)SliderRightOffsetY.Value} px";
+
+            OnDraftLayoutChanged("RIGHT");
+        }
+
+        private void OnDraftLayoutChanged(string cardId)
+        {
+            RenderDraftPreview(cardId);
+            SaveAppSettings();
+
+            var cardState = (cardId == "LEFT") ? _leftState : _rightState;
+            if (cardState.IsLiveUpdateEnabled && _outputManager.IsOutputActive(cardId))
             {
-                _outputManager.UpdateScaleMode("RIGHT", _rightState.ScaleMode);
+                ApplyDraftToLive(cardId);
             }
         }
 
-        private void SetScaleModeUI(string cardId, ScaleMode mode)
+        private void BtnLeftResetLayout_Click(object sender, RoutedEventArgs e)
         {
-            if (cardId == "LEFT")
-            {
-                _leftState.ScaleMode = mode;
-                RadioLeftFit.IsChecked = (mode == ScaleMode.Fit);
-                RadioLeftFill.IsChecked = (mode == ScaleMode.Fill);
-                RadioLeftStretch.IsChecked = (mode == ScaleMode.Stretch);
-            }
-            else
-            {
-                _rightState.ScaleMode = mode;
-                RadioRightFit.IsChecked = (mode == ScaleMode.Fit);
-                RadioRightFill.IsChecked = (mode == ScaleMode.Fill);
-                RadioRightStretch.IsChecked = (mode == ScaleMode.Stretch);
-            }
+            _leftState.DraftLayout.Zoom = 1.0;
+            _leftState.DraftLayout.OffsetX = 0;
+            _leftState.DraftLayout.OffsetY = 0;
+            _leftState.DraftLayout.ScaleMode = ScaleMode.Fit;
+
+            SyncCardStateToUI("LEFT", _leftState);
+            OnDraftLayoutChanged("LEFT");
         }
 
-        // --- Action Buttons ---
-
-        private void BtnLeftShow_Click(object sender, RoutedEventArgs e)
+        private void BtnRightResetLayout_Click(object sender, RoutedEventArgs e)
         {
-            StartCardOutput("LEFT", _leftState, CmbLeftDisplay, BadgeLeftStatus, TxtLeftStatus, TxtLeftError);
+            _rightState.DraftLayout.Zoom = 1.0;
+            _rightState.DraftLayout.OffsetX = 0;
+            _rightState.DraftLayout.OffsetY = 0;
+            _rightState.DraftLayout.ScaleMode = ScaleMode.Fit;
+
+            SyncCardStateToUI("RIGHT", _rightState);
+            OnDraftLayoutChanged("RIGHT");
         }
 
-        private void BtnRightShow_Click(object sender, RoutedEventArgs e)
+        private void ChkLeftLiveSync_Changed(object sender, RoutedEventArgs e)
         {
-            StartCardOutput("RIGHT", _rightState, CmbRightDisplay, BadgeRightStatus, TxtRightStatus, TxtRightError);
+            if (_isUpdatingUI || _leftState == null) return;
+            _leftState.IsLiveUpdateEnabled = (ChkLeftLiveSync.IsChecked == true);
+            _appSettings.LeftOutput.IsLiveUpdateEnabled = _leftState.IsLiveUpdateEnabled;
+            SaveAppSettings();
         }
 
-        private void StartCardOutput(
-            string cardId,
-            OutputCardState state,
-            ComboBox combo,
-            Border badge,
-            TextBlock badgeTxt,
-            TextBlock errorTxt)
+        private void ChkRightLiveSync_Changed(object sender, RoutedEventArgs e)
         {
+            if (_isUpdatingUI || _rightState == null) return;
+            _rightState.IsLiveUpdateEnabled = (ChkRightLiveSync.IsChecked == true);
+            _appSettings.RightOutput.IsLiveUpdateEnabled = _rightState.IsLiveUpdateEnabled;
+            SaveAppSettings();
+        }
+
+        // --- Apply Draft to Live Applied State ---
+
+        private void BtnLeftApply_Click(object sender, RoutedEventArgs e)
+        {
+            ApplyDraftToLive("LEFT");
+        }
+
+        private void BtnRightApply_Click(object sender, RoutedEventArgs e)
+        {
+            ApplyDraftToLive("RIGHT");
+        }
+
+        private void ApplyDraftToLive(string cardId)
+        {
+            var cardState = (cardId == "LEFT") ? _leftState : _rightState;
+            var combo = (cardId == "LEFT") ? CmbLeftDisplay : CmbRightDisplay;
+            var badge = (cardId == "LEFT") ? BadgeLeftStatus : BadgeRightStatus;
+            var badgeTxt = (cardId == "LEFT") ? TxtLeftStatus : TxtRightStatus;
+            var errorTxt = (cardId == "LEFT") ? TxtLeftError : TxtRightError;
+
+            // Atomically copy DraftLayout to LiveAppliedLayout
+            cardState.LiveAppliedLayout = cardState.DraftLayout.Clone();
+
             var display = GetSelectedDisplayFromCombo(combo);
             if (display == null)
             {
@@ -573,26 +791,41 @@ namespace RejiDisplay
                 return;
             }
 
+            // Ensure calibration is validated against GPU signal bounds
+            cardState.Calibration.ValidateAndClamp(display.Width, display.Height);
+
             BitmapImage? bitmap = null;
-            if (!string.IsNullOrEmpty(state.CurrentMediaPath))
+            if (!string.IsNullOrEmpty(cardState.LiveAppliedLayout.MediaPath))
             {
-                bitmap = CreateBitmap(state.CurrentMediaPath);
+                bitmap = CreateBitmap(cardState.LiveAppliedLayout.MediaPath);
             }
 
             try
             {
-                _outputManager.StartOutput(cardId, display, state.ScaleMode, bitmap, state.IsBlackout);
-                state.IsActive = true;
-                SetCardStatus(state, badge, badgeTxt, state.IsBlackout ? "BLACKOUT" : "ACTIVE", state.IsBlackout ? Colors.DarkOrange : Colors.LimeGreen);
+                if (_outputManager.IsOutputActive(cardId))
+                {
+                    _outputManager.UpdateLiveOutput(cardId, cardState.Calibration, cardState.LiveAppliedLayout, bitmap, cardState.IsBlackout);
+                }
+                else
+                {
+                    _outputManager.StartOutput(cardId, display, cardState.Calibration, cardState.LiveAppliedLayout, bitmap, cardState.IsBlackout);
+                }
+
+                cardState.IsActive = true;
+                SetCardStatus(cardState, badge, badgeTxt, cardState.IsBlackout ? "BLACKOUT" : "ACTIVE", cardState.IsBlackout ? Colors.DarkOrange : Colors.LimeGreen);
                 errorTxt.Visibility = Visibility.Collapsed;
-                TxtGlobalStatus.Text = $"{cardId} LED çıktısı {display.FriendlyName} üzerinde yayında.";
+                TxtGlobalStatus.Text = $"{cardId} LED yayını güncellendi ({display.FriendlyName}).";
             }
             catch (Exception ex)
             {
-                errorTxt.Text = $"Çıkış penceresi oluşturulamadı: {ex.Message}";
+                errorTxt.Text = $"Çıkış yayını uygulanamadı: {ex.Message}";
                 errorTxt.Visibility = Visibility.Visible;
             }
+
+            SaveAppSettings();
         }
+
+        // --- Immediate Live Safety Controls ---
 
         private void BtnLeftStop_Click(object sender, RoutedEventArgs e)
         {
@@ -636,7 +869,7 @@ namespace RejiDisplay
             }
             else
             {
-                blackBtn.Content = "⚫ SİYAH EKRAN (BLACK)";
+                blackBtn.Content = "⚫ SİYAH (BLACK)";
                 if (state.IsActive)
                 {
                     SetCardStatus(state, badge, badgeTxt, "ACTIVE", Colors.LimeGreen);
@@ -644,11 +877,7 @@ namespace RejiDisplay
             }
 
             _outputManager.UpdateBlackout(cardId, state.IsBlackout);
-
-            if (cardId == "LEFT") _appSettings.LeftOutput.IsBlackout = state.IsBlackout;
-            else _appSettings.RightOutput.IsBlackout = state.IsBlackout;
-
-            _settingsService.SaveSettings(_appSettings);
+            SaveAppSettings();
         }
 
         private void BtnStopAll_Click(object sender, RoutedEventArgs e)
@@ -665,7 +894,6 @@ namespace RejiDisplay
 
         private void BtnIdentify_Click(object sender, RoutedEventArgs e)
         {
-            // Requirement 4: Identify overlays must be completely separate from media output windows
             var displays = _displayService.GetDisplays();
 
             foreach (var display in displays)
@@ -693,6 +921,47 @@ namespace RejiDisplay
             }
 
             TxtGlobalStatus.Text = "Ekran numaraları tanımlama katmanı gösteriliyor (3.5s).";
+        }
+
+        // --- Calibration Input Handlers ---
+
+        private void TxtLeftCalibration_LostFocus(object sender, RoutedEventArgs e)
+        {
+            if (int.TryParse(TxtLeftLedW.Text, out int w) && w > 0) _leftState.Calibration.LogicalLedWidth = w;
+            if (int.TryParse(TxtLeftLedH.Text, out int h) && h > 0) _leftState.Calibration.LogicalLedHeight = h;
+            if (int.TryParse(TxtLeftVpX.Text, out int vx)) _leftState.Calibration.ViewportX = vx;
+            if (int.TryParse(TxtLeftVpY.Text, out int vy)) _leftState.Calibration.ViewportY = vy;
+
+            SaveAppSettings();
+            RenderDraftPreview("LEFT");
+        }
+
+        private void TxtRightCalibration_LostFocus(object sender, RoutedEventArgs e)
+        {
+            if (int.TryParse(TxtRightLedW.Text, out int w) && w > 0) _rightState.Calibration.LogicalLedWidth = w;
+            if (int.TryParse(TxtRightLedH.Text, out int h) && h > 0) _rightState.Calibration.LogicalLedHeight = h;
+            if (int.TryParse(TxtRightVpX.Text, out int vx)) _rightState.Calibration.ViewportX = vx;
+            if (int.TryParse(TxtRightVpY.Text, out int vy)) _rightState.Calibration.ViewportY = vy;
+
+            SaveAppSettings();
+            RenderDraftPreview("RIGHT");
+        }
+
+        private void SaveAppSettings()
+        {
+            _appSettings.LeftOutput.Calibration = _leftState.Calibration;
+            _appSettings.LeftOutput.DraftLayout = _leftState.DraftLayout;
+            _appSettings.LeftOutput.LiveAppliedLayout = _leftState.LiveAppliedLayout;
+            _appSettings.LeftOutput.IsLiveUpdateEnabled = _leftState.IsLiveUpdateEnabled;
+            _appSettings.LeftOutput.IsBlackout = _leftState.IsBlackout;
+
+            _appSettings.RightOutput.Calibration = _rightState.Calibration;
+            _appSettings.RightOutput.DraftLayout = _rightState.DraftLayout;
+            _appSettings.RightOutput.LiveAppliedLayout = _rightState.LiveAppliedLayout;
+            _appSettings.RightOutput.IsLiveUpdateEnabled = _rightState.IsLiveUpdateEnabled;
+            _appSettings.RightOutput.IsBlackout = _rightState.IsBlackout;
+
+            _settingsService.SaveSettings(_appSettings);
         }
 
         private void SetCardStatus(OutputCardState state, Border badge, TextBlock badgeTxt, string statusText, Color color)

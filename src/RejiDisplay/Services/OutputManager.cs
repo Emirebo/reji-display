@@ -23,9 +23,14 @@ namespace RejiDisplay.Services
             return null;
         }
 
-        public void StartOutput(string cardId, DisplayInfo display, ScaleMode scaleMode, BitmapImage? imageBitmap, bool isBlackout)
+        public void StartOutput(
+            string cardId,
+            DisplayInfo display,
+            OutputCalibration calibration,
+            ImageLayoutState liveAppliedLayout,
+            BitmapImage? imageBitmap,
+            bool isBlackout)
         {
-            // Close existing window for this card if any
             StopOutput(cardId);
 
             var window = new OutputWindow(display);
@@ -40,16 +45,20 @@ namespace RejiDisplay.Services
             };
 
             window.Show();
-            if (imageBitmap != null)
-            {
-                window.SetImage(imageBitmap, scaleMode);
-            }
-            else
-            {
-                window.SetScaleMode(scaleMode);
-            }
+            window.RenderLiveAppliedState(calibration, liveAppliedLayout, imageBitmap, isBlackout);
+        }
 
-            window.SetBlackout(isBlackout);
+        public void UpdateLiveOutput(
+            string cardId,
+            OutputCalibration calibration,
+            ImageLayoutState liveAppliedLayout,
+            BitmapImage? imageBitmap,
+            bool isBlackout)
+        {
+            if (_activeWindows.TryGetValue(cardId, out var window))
+            {
+                window.RenderLiveAppliedState(calibration, liveAppliedLayout, imageBitmap, isBlackout);
+            }
         }
 
         public void StopOutput(string cardId)
@@ -77,27 +86,11 @@ namespace RejiDisplay.Services
             }
         }
 
-        public void UpdateScaleMode(string cardId, ScaleMode scaleMode)
-        {
-            if (_activeWindows.TryGetValue(cardId, out var window))
-            {
-                window.SetScaleMode(scaleMode);
-            }
-        }
-
         public void UpdateBlackout(string cardId, bool isBlackout)
         {
             if (_activeWindows.TryGetValue(cardId, out var window))
             {
                 window.SetBlackout(isBlackout);
-            }
-        }
-
-        public void UpdateMedia(string cardId, BitmapImage bitmap, ScaleMode scaleMode)
-        {
-            if (_activeWindows.TryGetValue(cardId, out var window))
-            {
-                window.SetImage(bitmap, scaleMode);
             }
         }
     }

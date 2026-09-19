@@ -1,5 +1,6 @@
 using System;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -11,7 +12,6 @@ namespace RejiDisplay
     public partial class OutputWindow : Window
     {
         public DisplayInfo TargetDisplay { get; private set; }
-        private ScaleMode _scaleMode = ScaleMode.Fit;
 
         public OutputWindow(DisplayInfo targetDisplay)
         {
@@ -27,6 +27,11 @@ namespace RejiDisplay
             this.Top = display.Top;
             this.Width = display.Width;
             this.Height = display.Height;
+
+            MainCanvas.Width = display.Width;
+            MainCanvas.Height = display.Height;
+            BlackoutOverlay.Width = display.Width;
+            BlackoutOverlay.Height = display.Height;
 
             IntPtr hwnd = new WindowInteropHelper(this).Handle;
             if (hwnd != IntPtr.Zero)
@@ -45,33 +50,40 @@ namespace RejiDisplay
             }
         }
 
-        public void SetImage(BitmapImage? bitmap, ScaleMode scaleMode)
+        public void RenderLiveAppliedState(OutputCalibration calibration, ImageLayoutState layout, BitmapImage? bitmap, bool isBlackout)
         {
-            _scaleMode = scaleMode;
+            calibration.ValidateAndClamp(TargetDisplay.Width, TargetDisplay.Height);
+
+            Canvas.SetLeft(ViewportCanvas, calibration.ViewportX);
+            Canvas.SetTop(ViewportCanvas, calibration.ViewportY);
+            ViewportCanvas.Width = calibration.ViewportWidth;
+            ViewportCanvas.Height = calibration.ViewportHeight;
+
+            LedViewportBorder.Width = calibration.ViewportWidth;
+            LedViewportBorder.Height = calibration.ViewportHeight;
+
             MediaImage.Source = bitmap;
-            ApplyScaleMode(scaleMode);
-        }
 
-        public void SetScaleMode(ScaleMode scaleMode)
-        {
-            _scaleMode = scaleMode;
-            ApplyScaleMode(scaleMode);
-        }
-
-        private void ApplyScaleMode(ScaleMode scaleMode)
-        {
-            switch (scaleMode)
+            if (bitmap != null && bitmap.PixelWidth > 0 && bitmap.PixelHeight > 0)
             {
-                case ScaleMode.Fit:
-                    MediaImage.Stretch = Stretch.Uniform;
-                    break;
-                case ScaleMode.Fill:
-                    MediaImage.Stretch = Stretch.UniformToFill;
-                    break;
-                case ScaleMode.Stretch:
-                    MediaImage.Stretch = Stretch.Fill;
-                    break;
+                MediaImage.Width = bitmap.PixelWidth;
+                MediaImage.Height = bitmap.PixelHeight;
+
+                var transform = LayoutTransformHelper.CalculateTransform(
+                    bitmap.PixelWidth,
+                    bitmap.PixelHeight,
+                    calibration.ViewportWidth,
+                    calibration.ViewportHeight,
+                    layout);
+
+                MediaImage.RenderTransform = transform;
             }
+            else
+            {
+                MediaImage.RenderTransform = Transform.Identity;
+            }
+
+            SetBlackout(isBlackout);
         }
 
         public void SetBlackout(bool isBlackout)

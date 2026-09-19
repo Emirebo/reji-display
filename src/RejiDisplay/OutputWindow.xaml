@@ -8,17 +8,24 @@
         Topmost="True"
         Background="Black"
         WindowStartupLocation="Manual">
-    <Grid Background="Black">
-        <!-- Displayed Media Image -->
-        <Image x:Name="MediaImage"
-               HorizontalAlignment="Center"
-               VerticalAlignment="Center"
-               Stretch="Uniform"
-               Visibility="Visible" />
+    <Canvas x:Name="MainCanvas" Background="Black" ClipToBounds="True">
+        <!-- Calibrated Signal Viewport Container -->
+        <Canvas x:Name="ViewportCanvas" Background="Black" ClipToBounds="True">
+            <!-- Logical LED Clipping Viewport -->
+            <Border x:Name="LedViewportBorder" Background="Black" ClipToBounds="True" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <Image x:Name="MediaImage"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           RenderTransformOrigin="0.5,0.5"/>
+                </Grid>
+            </Border>
+        </Canvas>
 
-        <!-- Blackout Layer -->
+        <!-- Live Blackout Overlay -->
         <Grid x:Name="BlackoutOverlay"
               Background="Black"
-              Visibility="Collapsed" />
-    </Grid>
+              Visibility="Collapsed"
+              Canvas.Left="0" Canvas.Top="0"/>
+    </Canvas>
 </Window>
