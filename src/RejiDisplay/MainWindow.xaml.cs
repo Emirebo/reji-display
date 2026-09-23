@@ -484,6 +484,9 @@ namespace RejiDisplay
             previewCanvas.Width = viewportW;
             previewCanvas.Height = viewportH;
 
+            double targetRefWidth = (cardState.Calibration.ViewportWidth > 0) ? cardState.Calibration.ViewportWidth : (cardState.Calibration.LogicalLedWidth > 0 ? cardState.Calibration.LogicalLedWidth : 1920);
+            double targetRefHeight = (cardState.Calibration.ViewportHeight > 0) ? cardState.Calibration.ViewportHeight : (cardState.Calibration.LogicalLedHeight > 0 ? cardState.Calibration.LogicalLedHeight : 1080);
+
             var mediaType = cardState.DraftLayout.MediaSource.Type;
 
             if (mediaType == MediaSourceType.Website)
@@ -523,7 +526,9 @@ namespace RejiDisplay
                         vidH,
                         viewportW,
                         viewportH,
-                        cardState.DraftLayout);
+                        cardState.DraftLayout,
+                        targetRefWidth,
+                        targetRefHeight);
 
                     previewVideo.Width = rect.Width;
                     previewVideo.Height = rect.Height;
@@ -562,7 +567,9 @@ namespace RejiDisplay
                             bitmap.PixelHeight,
                             viewportW,
                             viewportH,
-                            cardState.DraftLayout);
+                            cardState.DraftLayout,
+                            targetRefWidth,
+                            targetRefHeight);
 
                         previewImg.Width = rect.Width;
                         previewImg.Height = rect.Height;

@@ -20,7 +20,9 @@ namespace RejiDisplay.Helpers
             double imgHeight,
             double viewportWidth,
             double viewportHeight,
-            ImageLayoutState layout)
+            ImageLayoutState layout,
+            double targetRefWidth = 0,
+            double targetRefHeight = 0)
         {
             if (imgWidth <= 0 || imgHeight <= 0 || viewportWidth <= 0 || viewportHeight <= 0)
             {
@@ -60,8 +62,17 @@ namespace RejiDisplay.Helpers
             double renderedWidth = imgWidth * baseScaleX * finalZoom;
             double renderedHeight = imgHeight * baseScaleY * finalZoom;
 
-            double left = (viewportWidth - renderedWidth) / 2.0 + layout.OffsetX;
-            double top = (viewportHeight - renderedHeight) / 2.0 + layout.OffsetY;
+            double offsetX = layout.OffsetX;
+            double offsetY = layout.OffsetY;
+
+            if (targetRefWidth > 0 && targetRefHeight > 0)
+            {
+                offsetX = layout.OffsetX * (viewportWidth / targetRefWidth);
+                offsetY = layout.OffsetY * (viewportHeight / targetRefHeight);
+            }
+
+            double left = (viewportWidth - renderedWidth) / 2.0 + offsetX;
+            double top = (viewportHeight - renderedHeight) / 2.0 + offsetY;
 
             return new LayoutRect
             {
