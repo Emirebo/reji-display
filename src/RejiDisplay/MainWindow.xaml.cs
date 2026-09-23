@@ -264,10 +264,7 @@ namespace RejiDisplay
                 }
 
                 SyncCardStateToUI("LEFT", _leftState);
-                if (TxtLeftLiveTitle != null && !string.IsNullOrEmpty(_leftState.LiveAppliedLayout.MediaSource.DisplayName))
-                {
-                    TxtLeftLiveTitle.Text = _leftState.LiveAppliedLayout.MediaSource.DisplayName;
-                }
+                UpdateLiveBannerUI("LEFT");
                 RenderContentBankUI("LEFT");
 
                 if (!string.IsNullOrEmpty(_leftState.DraftLayout.MediaPath))
@@ -301,10 +298,7 @@ namespace RejiDisplay
                 }
 
                 SyncCardStateToUI("RIGHT", _rightState);
-                if (TxtRightLiveTitle != null && !string.IsNullOrEmpty(_rightState.LiveAppliedLayout.MediaSource.DisplayName))
-                {
-                    TxtRightLiveTitle.Text = _rightState.LiveAppliedLayout.MediaSource.DisplayName;
-                }
+                UpdateLiveBannerUI("RIGHT");
                 RenderContentBankUI("RIGHT");
 
                 if (!string.IsNullOrEmpty(_rightState.DraftLayout.MediaPath))
@@ -1925,6 +1919,53 @@ namespace RejiDisplay
             badgeTxt.Text = statusText;
             badge.Background = new SolidColorBrush(color) { Opacity = 0.85 };
             badgeTxt.Foreground = Brushes.White;
+            UpdateLiveBannerUI(state.CardId);
+        }
+
+        private void UpdateLiveBannerUI(string cardId)
+        {
+            var cardState = (cardId == "LEFT") ? _leftState : _rightState;
+            var banner = (cardId == "LEFT") ? BorderLeftLiveBanner : BorderRightLiveBanner;
+            var header = (cardId == "LEFT") ? TxtLeftLiveHeader : TxtRightLiveHeader;
+            var title = (cardId == "LEFT") ? TxtLeftLiveTitle : TxtRightLiveTitle;
+
+            if (banner == null || header == null || title == null) return;
+
+            bool isActive = cardState.IsActive && _outputManager.IsOutputActive(cardId);
+
+            if (isActive)
+            {
+                if (cardState.IsBlackout)
+                {
+                    banner.BorderBrush = new SolidColorBrush(Color.FromRgb(245, 158, 11));
+                    header.Text = "🟡 BLACKOUT: ";
+                    header.Foreground = new SolidColorBrush(Color.FromRgb(245, 158, 11));
+                    title.Text = string.IsNullOrEmpty(cardState.LiveAppliedLayout.MediaSource.DisplayName)
+                        ? "[Siyah Ekran]"
+                        : cardState.LiveAppliedLayout.MediaSource.DisplayName;
+                    title.Foreground = new SolidColorBrush(Color.FromRgb(245, 158, 11));
+                }
+                else
+                {
+                    banner.BorderBrush = new SolidColorBrush(Color.FromRgb(16, 185, 129));
+                    header.Text = "🔴 YAYINDA: ";
+                    header.Foreground = new SolidColorBrush(Color.FromRgb(16, 185, 129));
+                    title.Text = string.IsNullOrEmpty(cardState.LiveAppliedLayout.MediaSource.DisplayName)
+                        ? "[İçerik Yayında]"
+                        : cardState.LiveAppliedLayout.MediaSource.DisplayName;
+                    title.Foreground = Brushes.White;
+                }
+            }
+            else
+            {
+                banner.BorderBrush = new SolidColorBrush(Color.FromRgb(71, 85, 105));
+                header.Text = "⚪ SON YAYINLANAN: ";
+                header.Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184));
+                title.Text = string.IsNullOrEmpty(cardState.LiveAppliedLayout.MediaSource.DisplayName)
+                    ? "[Çıkış Kapalı]"
+                    : $"{cardState.LiveAppliedLayout.MediaSource.DisplayName} (Çıkış Kapalı)";
+                title.Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184));
+            }
         }
     }
 }

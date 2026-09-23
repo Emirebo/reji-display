@@ -321,10 +321,10 @@
                         </Grid>
 
                         <!-- Live Output Info Banner -->
-                        <Border Grid.Row="1" Background="#0F172A" BorderBrush="#10B981" BorderThickness="1" CornerRadius="6" Padding="8,5" Margin="0,0,0,10">
+                        <Border x:Name="BorderLeftLiveBanner" Grid.Row="1" Background="#0F172A" BorderBrush="#475569" BorderThickness="1" CornerRadius="6" Padding="8,5" Margin="0,0,0,10">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="🔴 YAYINDA: " FontWeight="Bold" FontSize="11" Foreground="#10B981" VerticalAlignment="Center"/>
-                                <TextBlock x:Name="TxtLeftLiveTitle" Text="[Yayın Kapalı]" FontWeight="SemiBold" FontSize="11" Foreground="#F9FAFC" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="320"/>
+                                <TextBlock x:Name="TxtLeftLiveHeader" Text="⚪ SON YAYINLANAN: " FontWeight="Bold" FontSize="11" Foreground="#94A3B8" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="TxtLeftLiveTitle" Text="[Çıkış Kapalı]" FontWeight="SemiBold" FontSize="11" Foreground="#94A3B8" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="320"/>
                             </StackPanel>
                         </Border>
 
@@ -592,10 +592,10 @@
                         </Grid>
 
                         <!-- Live Output Info Banner -->
-                        <Border Grid.Row="1" Background="#0F172A" BorderBrush="#10B981" BorderThickness="1" CornerRadius="6" Padding="8,5" Margin="0,0,0,10">
+                        <Border x:Name="BorderRightLiveBanner" Grid.Row="1" Background="#0F172A" BorderBrush="#475569" BorderThickness="1" CornerRadius="6" Padding="8,5" Margin="0,0,0,10">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="🔴 YAYINDA: " FontWeight="Bold" FontSize="11" Foreground="#10B981" VerticalAlignment="Center"/>
-                                <TextBlock x:Name="TxtRightLiveTitle" Text="[Yayın Kapalı]" FontWeight="SemiBold" FontSize="11" Foreground="#F9FAFC" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="320"/>
+                                <TextBlock x:Name="TxtRightLiveHeader" Text="⚪ SON YAYINLANAN: " FontWeight="Bold" FontSize="11" Foreground="#94A3B8" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="TxtRightLiveTitle" Text="[Çıkış Kapalı]" FontWeight="SemiBold" FontSize="11" Foreground="#94A3B8" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="320"/>
                             </StackPanel>
                         </Border>
 
