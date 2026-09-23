@@ -247,6 +247,7 @@ namespace RejiDisplay
                 _leftState.DraftLayout = _appSettings.LeftOutput.DraftLayout ?? new ImageLayoutState();
                 _leftState.LiveAppliedLayout = _appSettings.LeftOutput.LiveAppliedLayout ?? new ImageLayoutState();
                 _leftState.IsLiveUpdateEnabled = _appSettings.LeftOutput.IsLiveUpdateEnabled;
+                _leftState.ContentBank = _appSettings.LeftOutput.ContentBank ?? new List<ContentBankItem>();
 
                 var match = _displayService.FindMatchingDisplay(_allDisplays, _appSettings.LeftOutput.DeviceName, _appSettings.LeftOutput.DeviceId);
                 if (match != null && !match.IsPrimary && (_reservedCenterDisplay == null || !_displayService.IsSameDisplay(match, _reservedCenterDisplay)))
@@ -263,6 +264,11 @@ namespace RejiDisplay
                 }
 
                 SyncCardStateToUI("LEFT", _leftState);
+                if (TxtLeftLiveTitle != null && !string.IsNullOrEmpty(_leftState.LiveAppliedLayout.MediaSource.DisplayName))
+                {
+                    TxtLeftLiveTitle.Text = _leftState.LiveAppliedLayout.MediaSource.DisplayName;
+                }
+                RenderContentBankUI("LEFT");
 
                 if (!string.IsNullOrEmpty(_leftState.DraftLayout.MediaPath))
                 {
@@ -278,6 +284,7 @@ namespace RejiDisplay
                 _rightState.DraftLayout = _appSettings.RightOutput.DraftLayout ?? new ImageLayoutState();
                 _rightState.LiveAppliedLayout = _appSettings.RightOutput.LiveAppliedLayout ?? new ImageLayoutState();
                 _rightState.IsLiveUpdateEnabled = _appSettings.RightOutput.IsLiveUpdateEnabled;
+                _rightState.ContentBank = _appSettings.RightOutput.ContentBank ?? new List<ContentBankItem>();
 
                 var match = _displayService.FindMatchingDisplay(_allDisplays, _appSettings.RightOutput.DeviceName, _appSettings.RightOutput.DeviceId);
                 if (match != null && !match.IsPrimary && (_reservedCenterDisplay == null || !_displayService.IsSameDisplay(match, _reservedCenterDisplay)))
@@ -294,6 +301,11 @@ namespace RejiDisplay
                 }
 
                 SyncCardStateToUI("RIGHT", _rightState);
+                if (TxtRightLiveTitle != null && !string.IsNullOrEmpty(_rightState.LiveAppliedLayout.MediaSource.DisplayName))
+                {
+                    TxtRightLiveTitle.Text = _rightState.LiveAppliedLayout.MediaSource.DisplayName;
+                }
+                RenderContentBankUI("RIGHT");
 
                 if (!string.IsNullOrEmpty(_rightState.DraftLayout.MediaPath))
                 {
@@ -1340,7 +1352,12 @@ namespace RejiDisplay
             var cardState = (cardId == "LEFT") ? _leftState : _rightState;
             if (cardState.IsLiveUpdateEnabled && _outputManager.IsOutputActive(cardId))
             {
-                ApplyDraftToLive(cardId);
+                // Live Sync constraint: Only sync position/scale if staged media matches current live media!
+                if (string.Equals(cardState.DraftLayout.MediaPath, cardState.LiveAppliedLayout.MediaPath, StringComparison.OrdinalIgnoreCase) &&
+                    cardState.DraftLayout.MediaSource.Type == cardState.LiveAppliedLayout.MediaSource.Type)
+                {
+                    ApplyDraftToLive(cardId);
+                }
             }
         }
 
@@ -1382,6 +1399,216 @@ namespace RejiDisplay
             SaveAppSettings();
         }
 
+        // --- Content Bank / Presets Management ---
+
+        private void BtnLeftAddToBank_Click(object sender, RoutedEventArgs e)
+        {
+            AddDraftToContentBank("LEFT", _leftState);
+        }
+
+        private void BtnRightAddToBank_Click(object sender, RoutedEventArgs e)
+        {
+            AddDraftToContentBank("RIGHT", _rightState);
+        }
+
+        private void AddDraftToContentBank(string cardId, OutputCardState cardState)
+        {
+            if (_isInitializing || _isUpdatingUI) return;
+
+            if (string.IsNullOrEmpty(cardState.DraftLayout.MediaPath) && cardState.DraftLayout.MediaSource.Type != MediaSourceType.Website)
+            {
+                var errTxt = (cardId == "LEFT") ? TxtLeftError : TxtRightError;
+                errTxt.Text = "Bankaya eklemek için önce sıradaki medyayı seçin.";
+                errTxt.Visibility = Visibility.Visible;
+                return;
+            }
+
+            string defaultTitle = cardState.DraftLayout.MediaSource.DisplayName;
+            var item = ContentBankItem.FromLayoutState(defaultTitle, cardState.DraftLayout);
+            cardState.ContentBank.Add(item);
+
+            if (cardId == "LEFT") _appSettings.LeftOutput.ContentBank = cardState.ContentBank;
+            else _appSettings.RightOutput.ContentBank = cardState.ContentBank;
+
+            SaveAppSettings();
+            RenderContentBankUI(cardId);
+            TxtGlobalStatus.Text = $"{cardId} İçerik Bankasına eklendi: {defaultTitle}";
+        }
+
+        private void RenderContentBankUI(string cardId)
+        {
+            var cardState = (cardId == "LEFT") ? _leftState : _rightState;
+            var itemsPanel = (cardId == "LEFT") ? PanelLeftContentBankItems : PanelRightContentBankItems;
+
+            if (itemsPanel == null) return;
+
+            itemsPanel.Children.Clear();
+
+            if (cardState.ContentBank == null || cardState.ContentBank.Count == 0)
+            {
+                itemsPanel.Children.Add(new TextBlock
+                {
+                    Text = "(Kayıtlı içerik yok. Medya seçip '➕ Bankaya Ekle' butonuna basın)",
+                    FontSize = 10,
+                    Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)),
+                    Margin = new Thickness(0, 4, 0, 4)
+                });
+                return;
+            }
+
+            foreach (var item in cardState.ContentBank)
+            {
+                bool fileExists = item.CheckFileExists(out string? missingPath);
+                bool isCurrentlyLive = cardState.IsActive && string.Equals(item.MediaSource.FilePath, cardState.LiveAppliedLayout.MediaPath, StringComparison.OrdinalIgnoreCase);
+                bool isCurrentlyStaged = string.Equals(item.MediaSource.FilePath, cardState.DraftLayout.MediaPath, StringComparison.OrdinalIgnoreCase);
+
+                var border = new Border
+                {
+                    Background = new SolidColorBrush(Color.FromRgb(30, 41, 59)),
+                    BorderBrush = isCurrentlyLive ? new SolidColorBrush(Color.FromRgb(16, 185, 129)) :
+                                  isCurrentlyStaged ? new SolidColorBrush(Color.FromRgb(245, 158, 11)) :
+                                  new SolidColorBrush(Color.FromRgb(71, 85, 105)),
+                    BorderThickness = new Thickness(1),
+                    CornerRadius = new CornerRadius(4),
+                    Padding = new Thickness(6, 4, 6, 4),
+                    Margin = new Thickness(0, 0, 0, 4)
+                };
+
+                var grid = new Grid();
+                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+                var infoStack = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+                infoStack.Children.Add(new TextBlock
+                {
+                    Text = $"{item.GetIcon()} {item.Title}",
+                    FontSize = 11,
+                    FontWeight = FontWeights.SemiBold,
+                    Foreground = fileExists ? Brushes.White : new SolidColorBrush(Color.FromRgb(248, 113, 113)),
+                    VerticalAlignment = VerticalAlignment.Center,
+                    TextTrimming = TextTrimming.CharacterEllipsis,
+                    MaxWidth = 180
+                });
+
+                if (!fileExists)
+                {
+                    infoStack.Children.Add(new TextBlock
+                    {
+                        Text = " ⚠️ BULUNAMADI",
+                        FontSize = 9,
+                        FontWeight = FontWeights.Bold,
+                        Foreground = new SolidColorBrush(Color.FromRgb(248, 113, 113)),
+                        VerticalAlignment = VerticalAlignment.Center,
+                        Margin = new Thickness(4, 0, 0, 0)
+                    });
+                }
+                else if (isCurrentlyLive)
+                {
+                    infoStack.Children.Add(new TextBlock
+                    {
+                        Text = " 🔴 YAYINDA",
+                        FontSize = 9,
+                        FontWeight = FontWeights.Bold,
+                        Foreground = new SolidColorBrush(Color.FromRgb(16, 185, 129)),
+                        VerticalAlignment = VerticalAlignment.Center,
+                        Margin = new Thickness(4, 0, 0, 0)
+                    });
+                }
+                else if (isCurrentlyStaged)
+                {
+                    infoStack.Children.Add(new TextBlock
+                    {
+                        Text = " 🟡 SIRADAKİ",
+                        FontSize = 9,
+                        FontWeight = FontWeights.Bold,
+                        Foreground = new SolidColorBrush(Color.FromRgb(245, 158, 11)),
+                        VerticalAlignment = VerticalAlignment.Center,
+                        Margin = new Thickness(4, 0, 0, 0)
+                    });
+                }
+
+                grid.Children.Add(infoStack);
+                Grid.SetColumn(infoStack, 0);
+
+                var btnStack = new StackPanel { Orientation = Orientation.Horizontal };
+
+                var selectBtn = new Button
+                {
+                    Content = "🎯 SIRADAKİ YAP",
+                    FontSize = 9,
+                    FontWeight = FontWeights.Bold,
+                    Padding = new Thickness(6, 2, 6, 2),
+                    Margin = new Thickness(0, 0, 4, 0),
+                    Style = (Style)FindResource("SecondaryBtnStyle")
+                };
+                selectBtn.Click += (s, e) => StageContentBankItem(cardId, item);
+                btnStack.Children.Add(selectBtn);
+
+                var delBtn = new Button
+                {
+                    Content = "🗑️",
+                    FontSize = 9,
+                    Padding = new Thickness(4, 2, 4, 2),
+                    Style = (Style)FindResource("DangerBtnStyle")
+                };
+                delBtn.Click += (s, e) => RemoveFromContentBank(cardId, item);
+                btnStack.Children.Add(delBtn);
+
+                grid.Children.Add(btnStack);
+                Grid.SetColumn(btnStack, 1);
+
+                border.Child = grid;
+                itemsPanel.Children.Add(border);
+            }
+        }
+
+        private void StageContentBankItem(string cardId, ContentBankItem item)
+        {
+            var cardState = (cardId == "LEFT") ? _leftState : _rightState;
+            var errorTxt = (cardId == "LEFT") ? TxtLeftError : TxtRightError;
+
+            if (!item.CheckFileExists(out string? missingPath))
+            {
+                errorTxt.Text = $"⚠️ HATA: İçerik yüklenemedi! Dosya bulunamadı: {missingPath}";
+                errorTxt.Visibility = Visibility.Visible;
+                AppLogger.LogWarning($"Sıradaki yapma hatası: {missingPath} eksik.");
+                return;
+            }
+
+            cardState.DraftLayout = item.ToLayoutState();
+            SyncCardStateToUI(cardId, cardState);
+
+            var previewImg = (cardId == "LEFT") ? ImgLeftPreview : ImgRightPreview;
+            var previewVideo = (cardId == "LEFT") ? MediaLeftPreviewVideo : MediaRightPreviewVideo;
+            var promptPanel = (cardId == "LEFT") ? PanelLeftDropPrompt : PanelRightDropPrompt;
+            var mediaPathTxt = (cardId == "LEFT") ? TxtLeftMediaPath : TxtRightMediaPath;
+            var videoControlsPanel = (cardId == "LEFT") ? PanelLeftVideoControls : PanelRightVideoControls;
+
+            if (!string.IsNullOrEmpty(cardState.DraftLayout.MediaPath))
+            {
+                LoadMediaForCard(cardId, cardState, cardState.DraftLayout.MediaPath, previewImg, previewVideo, promptPanel, mediaPathTxt, errorTxt, videoControlsPanel);
+            }
+
+            errorTxt.Visibility = Visibility.Collapsed;
+            RenderDraftPreview(cardId);
+            RenderContentBankUI(cardId);
+            SaveAppSettingsDebounced();
+
+            TxtGlobalStatus.Text = $"🟡 {cardId} için SIRADAKİ içerik seçildi: {item.Title}. (Yayına almak için 🔴 UYGULA butonuna basın)";
+        }
+
+        private void RemoveFromContentBank(string cardId, ContentBankItem item)
+        {
+            var cardState = (cardId == "LEFT") ? _leftState : _rightState;
+            cardState.ContentBank.RemoveAll(i => i.Id == item.Id);
+
+            if (cardId == "LEFT") _appSettings.LeftOutput.ContentBank = cardState.ContentBank;
+            else _appSettings.RightOutput.ContentBank = cardState.ContentBank;
+
+            SaveAppSettings();
+            RenderContentBankUI(cardId);
+        }
+
         // --- Apply Draft to Live Applied State ---
 
         private void BtnLeftApply_Click(object sender, RoutedEventArgs e)
@@ -1401,10 +1628,21 @@ namespace RejiDisplay
             var badge = (cardId == "LEFT") ? BadgeLeftStatus : BadgeRightStatus;
             var badgeTxt = (cardId == "LEFT") ? TxtLeftStatus : TxtRightStatus;
             var errorTxt = (cardId == "LEFT") ? TxtLeftError : TxtRightError;
+            var liveTitleTxt = (cardId == "LEFT") ? TxtLeftLiveTitle : TxtRightLiveTitle;
 
-            // Atomically copy DraftLayout and DraftCalibration to LiveApplied state
-            cardState.LiveAppliedLayout = cardState.DraftLayout.Clone();
-            cardState.LiveAppliedCalibration = cardState.DraftCalibration.Clone();
+            var staged = cardState.DraftLayout;
+
+            // Safe pre-validation: verify file availability before switching live output!
+            if (staged.MediaSource.Type == MediaSourceType.Image || staged.MediaSource.Type == MediaSourceType.Video)
+            {
+                if (!string.IsNullOrEmpty(staged.MediaPath) && !File.Exists(staged.MediaPath))
+                {
+                    errorTxt.Text = $"⚠️ HATA: YAYINA ALINAMADI! '{staged.MediaSource.DisplayName}' dosyası diske erişilemiyor. Mevcut canlı yayın korundu.";
+                    errorTxt.Visibility = Visibility.Visible;
+                    AppLogger.LogError($"ApplyDraftToLive hatası ({cardId}): {staged.MediaPath} bulunamadı.");
+                    return;
+                }
+            }
 
             var display = GetSelectedDisplayFromCombo(combo);
             if (display == null)
@@ -1421,11 +1659,15 @@ namespace RejiDisplay
                 return;
             }
 
+            // Atomically copy DraftLayout and DraftCalibration to LiveApplied state
+            cardState.LiveAppliedLayout = cardState.DraftLayout.Clone();
+            cardState.LiveAppliedCalibration = cardState.DraftCalibration.Clone();
+
             // Ensure live applied calibration is validated against GPU signal bounds
             cardState.LiveAppliedCalibration.ValidateAndClamp(display.Width, display.Height);
 
             BitmapImage? bitmap = null;
-            if (!string.IsNullOrEmpty(cardState.LiveAppliedLayout.MediaPath))
+            if (!string.IsNullOrEmpty(cardState.LiveAppliedLayout.MediaPath) && cardState.LiveAppliedLayout.MediaSource.Type == MediaSourceType.Image)
             {
                 bitmap = CreateBitmap(cardState.LiveAppliedLayout.MediaPath);
             }
@@ -1444,12 +1686,20 @@ namespace RejiDisplay
                 cardState.IsActive = true;
                 SetCardStatus(cardState, badge, badgeTxt, cardState.IsBlackout ? "BLACKOUT" : "ACTIVE", cardState.IsBlackout ? Colors.DarkOrange : Colors.LimeGreen);
                 errorTxt.Visibility = Visibility.Collapsed;
-                TxtGlobalStatus.Text = $"{cardId} LED yayını güncellendi ({display.FriendlyName}).";
+
+                if (liveTitleTxt != null)
+                {
+                    liveTitleTxt.Text = cardState.LiveAppliedLayout.MediaSource.DisplayName;
+                }
+
+                TxtGlobalStatus.Text = $"🔴 {cardId} LED canlı yayını güncellendi: {cardState.LiveAppliedLayout.MediaSource.DisplayName} ({display.FriendlyName}).";
+                RenderContentBankUI(cardId);
             }
             catch (Exception ex)
             {
                 errorTxt.Text = $"Çıkış yayını uygulanamadı: {ex.Message}";
                 errorTxt.Visibility = Visibility.Visible;
+                AppLogger.LogError($"ApplyDraftToLive exception ({cardId}): {ex.Message}", ex);
             }
 
             SaveAppSettings();

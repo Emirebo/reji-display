@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace RejiDisplay.Models
 {
     public class OutputConfig
@@ -16,11 +18,15 @@ namespace RejiDisplay.Models
         public bool IsLiveUpdateEnabled { get; set; } = false;
         public bool IsBlackout { get; set; }
 
+        // Content Bank / Presets for Event Staging
+        public List<ContentBankItem> ContentBank { get; set; } = new();
+
         public void PerformMigrationIfNeeded()
         {
             if (DraftLayout == null) DraftLayout = new ImageLayoutState();
             if (LiveAppliedLayout == null) LiveAppliedLayout = new ImageLayoutState();
             if (Calibration == null) Calibration = new OutputCalibration();
+            if (ContentBank == null) ContentBank = new List<ContentBankItem>();
 
             if (!string.IsNullOrEmpty(LastMediaPath))
             {
@@ -41,7 +47,7 @@ namespace RejiDisplay.Models
 
     public class AppSettings
     {
-        public int SchemaVersion { get; set; } = 2;
+        public int SchemaVersion { get; set; } = 3;
         public OutputConfig LeftOutput { get; set; } = new();
         public OutputConfig RightOutput { get; set; } = new();
         public string? ReservedCenterDeviceName { get; set; }

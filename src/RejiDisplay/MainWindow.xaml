@@ -302,7 +302,10 @@
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
                             <RowDefinition Height="180"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
@@ -310,59 +313,72 @@
                         </Grid.RowDefinitions>
 
                         <!-- Card Header -->
-                        <Grid Grid.Row="0" Margin="0,0,0,12">
+                        <Grid Grid.Row="0" Margin="0,0,0,8">
                             <TextBlock Text="LEFT LED" FontSize="20" FontWeight="Bold" Foreground="#38BDF8"/>
                             <Border x:Name="BadgeLeftStatus" HorizontalAlignment="Right" Background="#334155" CornerRadius="10" Padding="10,4">
                                 <TextBlock x:Name="TxtLeftStatus" Text="INACTIVE" FontWeight="Bold" FontSize="12" Foreground="#CBD5E1"/>
                             </Border>
                         </Grid>
 
+                        <!-- Live Output Info Banner -->
+                        <Border Grid.Row="1" Background="#0F172A" BorderBrush="#10B981" BorderThickness="1" CornerRadius="6" Padding="8,5" Margin="0,0,0,10">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="🔴 YAYINDA: " FontWeight="Bold" FontSize="11" Foreground="#10B981" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="TxtLeftLiveTitle" Text="[Yayın Kapalı]" FontWeight="SemiBold" FontSize="11" Foreground="#F9FAFC" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="320"/>
+                            </StackPanel>
+                        </Border>
+
                         <!-- Display Assignment Selector -->
-                        <StackPanel Grid.Row="1" Margin="0,0,0,12">
+                        <StackPanel Grid.Row="2" Margin="0,0,0,10">
                             <TextBlock Text="Hedef Ekran (Physical Output):" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,4"/>
                             <ComboBox x:Name="CmbLeftDisplay" SelectionChanged="CmbLeftDisplay_SelectionChanged"/>
                         </StackPanel>
 
-                        <!-- Interactive Draft Preview Zone -->
-                        <Border Grid.Row="2" x:Name="DropZoneLeft" Background="#0F172A" BorderBrush="#475569" BorderThickness="2" CornerRadius="6"
-                                AllowDrop="True" DragOver="DropZone_DragOver" Drop="DropZoneLeft_Drop" Margin="0,0,0,12">
-                            <Canvas x:Name="CanvasLeftPreviewViewport" Background="#000000" ClipToBounds="True" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                <StackPanel x:Name="PanelLeftDropPrompt" VerticalAlignment="Center" HorizontalAlignment="Center" Canvas.Left="35" Canvas.Top="50">
-                                    <TextBlock Text="🎬" FontSize="34" HorizontalAlignment="Center"/>
-                                    <TextBlock Text="Medya dosyasını (Görsel/Video) sürükleyin" FontWeight="Bold" FontSize="12" Foreground="{StaticResource TextPrimary}" HorizontalAlignment="Center"/>
-                                </StackPanel>
-                                <Border x:Name="PanelLeftWebPreviewPrompt" Visibility="Collapsed" Background="#1E293B" BorderBrush="#38BDF8" BorderThickness="1" CornerRadius="6" Padding="8" Width="130" Height="160" Canvas.Left="5" Canvas.Top="5">
-                                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                                        <TextBlock Text="🌐" FontSize="30" HorizontalAlignment="Center" Margin="0,0,0,2"/>
-                                        <TextBlock Text="WEB SİTESİ DRAFT" FontWeight="ExtraBold" FontSize="10" Foreground="#38BDF8" HorizontalAlignment="Center" TextAlignment="Center"/>
-                                        <TextBlock x:Name="TxtLeftWebPreviewHost" Text="subtitles.live.com" FontSize="10" FontWeight="Bold" Foreground="#F9FAFC" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" Margin="0,4,0,4"/>
-                                        <Border Background="#0EA5E9" CornerRadius="4" Padding="5,2" HorizontalAlignment="Center" Margin="0,2,0,0">
-                                            <TextBlock Text="YAYINA HAZIR" FontSize="9" FontWeight="Bold" Foreground="White"/>
-                                        </Border>
+                        <!-- Interactive Staged (SIRADAKİ) Preview Zone -->
+                        <Grid Grid.Row="3" Margin="0,0,0,10">
+                            <Border x:Name="DropZoneLeft" Background="#0F172A" BorderBrush="#475569" BorderThickness="2" CornerRadius="6"
+                                    AllowDrop="True" DragOver="DropZone_DragOver" Drop="DropZoneLeft_Drop">
+                                <Canvas x:Name="CanvasLeftPreviewViewport" Background="#000000" ClipToBounds="True" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <StackPanel x:Name="PanelLeftDropPrompt" VerticalAlignment="Center" HorizontalAlignment="Center" Canvas.Left="35" Canvas.Top="50">
+                                        <TextBlock Text="🎬" FontSize="34" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="Medya sürükleyin veya bankadan seçin" FontWeight="Bold" FontSize="12" Foreground="{StaticResource TextPrimary}" HorizontalAlignment="Center"/>
                                     </StackPanel>
-                                </Border>
-                                <Image x:Name="ImgLeftPreview" Visibility="Collapsed" RenderTransformOrigin="0.5,0.5"/>
-                                <MediaElement x:Name="MediaLeftPreviewVideo" Visibility="Collapsed" LoadedBehavior="Manual" UnloadedBehavior="Manual" IsMuted="True" Volume="0" MediaOpened="MediaLeftPreviewVideo_MediaOpened"/>
-                            </Canvas>
-                        </Border>
+                                    <Border x:Name="PanelLeftWebPreviewPrompt" Visibility="Collapsed" Background="#1E293B" BorderBrush="#38BDF8" BorderThickness="1" CornerRadius="6" Padding="8" Width="130" Height="160" Canvas.Left="5" Canvas.Top="5">
+                                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                                            <TextBlock Text="🌐" FontSize="30" HorizontalAlignment="Center" Margin="0,0,0,2"/>
+                                            <TextBlock Text="WEB SİTESİ SIRADAKİ" FontWeight="ExtraBold" FontSize="10" Foreground="#38BDF8" HorizontalAlignment="Center" TextAlignment="Center"/>
+                                            <TextBlock x:Name="TxtLeftWebPreviewHost" Text="subtitles.live.com" FontSize="10" FontWeight="Bold" Foreground="#F9FAFC" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" Margin="0,4,0,4"/>
+                                            <Border Background="#0EA5E9" CornerRadius="4" Padding="5,2" HorizontalAlignment="Center" Margin="0,2,0,0">
+                                                <TextBlock Text="YAYINA HAZIR" FontSize="9" FontWeight="Bold" Foreground="White"/>
+                                            </Border>
+                                        </StackPanel>
+                                    </Border>
+                                    <Image x:Name="ImgLeftPreview" Visibility="Collapsed" RenderTransformOrigin="0.5,0.5"/>
+                                    <MediaElement x:Name="MediaLeftPreviewVideo" Visibility="Collapsed" LoadedBehavior="Manual" UnloadedBehavior="Manual" IsMuted="True" Volume="0" MediaOpened="MediaLeftPreviewVideo_MediaOpened"/>
+                                </Canvas>
+                            </Border>
+                            <Border HorizontalAlignment="Left" VerticalAlignment="Top" Background="#F59E0B" CornerRadius="4" Padding="6,2" Margin="6,6,0,0">
+                                <TextBlock Text="🟡 SIRADAKİ (TASLAK)" FontSize="10" FontWeight="ExtraBold" Foreground="#0F172A"/>
+                            </Border>
+                        </Grid>
 
-                        <!-- Media Info & Actions -->
-                        <Grid Grid.Row="3" Margin="0,0,0,12">
+                        <!-- Media Info & Selection Actions -->
+                        <Grid Grid.Row="4" Margin="0,0,0,10">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock x:Name="TxtLeftMediaPath" Text="(Medya seçilmedi)" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" Foreground="#F9FAFC" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="TxtLeftMediaPath" Text="(Sıradaki medya seçilmedi)" FontSize="11" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" Foreground="#F9FAFC" VerticalAlignment="Center"/>
                             <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                <Button x:Name="BtnLeftChooseMedia" Content="📂 MEDYA SEÇ" Style="{StaticResource SecondaryBtnStyle}" Padding="8,4" FontSize="11" Margin="4,0,0,0" Click="BtnLeftChooseMedia_Click"/>
-                                <Button x:Name="BtnLeftChooseWeb" Content="🌐 WEB SİTESİ" Style="{StaticResource SecondaryBtnStyle}" Padding="8,4" FontSize="11" Margin="4,0,0,0" Click="BtnLeftChooseWeb_Click"/>
-                                <Button x:Name="BtnLeftTestPattern" Content="🎯 TEST PATTERN" Style="{StaticResource SecondaryBtnStyle}" Padding="8,4" FontSize="11" Margin="4,0,0,0" Click="BtnLeftTestPattern_Click"/>
-                                <Button x:Name="BtnLeftRestoreMedia" Content="↺ Önceki Medya" Style="{StaticResource SecondaryBtnStyle}" Padding="6,4" FontSize="11" Margin="4,0,0,0" Visibility="Collapsed" Click="BtnLeftRestoreMedia_Click"/>
+                                <Button x:Name="BtnLeftChooseMedia" Content="📂 MEDYA" Style="{StaticResource SecondaryBtnStyle}" Padding="6,4" FontSize="10" Margin="3,0,0,0" Click="BtnLeftChooseMedia_Click"/>
+                                <Button x:Name="BtnLeftChooseWeb" Content="🌐 WEB" Style="{StaticResource SecondaryBtnStyle}" Padding="6,4" FontSize="10" Margin="3,0,0,0" Click="BtnLeftChooseWeb_Click"/>
+                                <Button x:Name="BtnLeftTestPattern" Content="🎯 PATTERN" Style="{StaticResource SecondaryBtnStyle}" Padding="6,4" FontSize="10" Margin="3,0,0,0" Click="BtnLeftTestPattern_Click"/>
+                                <Button x:Name="BtnLeftRestoreMedia" Content="↺ Önceki" Style="{StaticResource SecondaryBtnStyle}" Padding="5,4" FontSize="10" Margin="3,0,0,0" Visibility="Collapsed" Click="BtnLeftRestoreMedia_Click"/>
                             </StackPanel>
                         </Grid>
 
                         <!-- Video Playback Controls Panel (Contextual) -->
-                        <Border x:Name="PanelLeftVideoControls" Background="#0F172A" CornerRadius="6" Padding="10" Margin="0,0,0,12" Visibility="Collapsed">
+                        <Border Grid.Row="5" x:Name="PanelLeftVideoControls" Background="#0F172A" CornerRadius="6" Padding="10" Margin="0,0,0,10" Visibility="Collapsed">
                             <StackPanel>
                                 <TextBlock Text="🎬 VİDEO KONTROLLERİ (VIDEO CONTROLS)" FontSize="11" FontWeight="Bold" Foreground="#38BDF8" Margin="0,0,0,8"/>
                                 <Grid Margin="0,0,0,8">
@@ -402,7 +418,7 @@
                         </Border>
 
                         <!-- Contextual Web Controls Panel -->
-                        <Border x:Name="PanelLeftWebControls" Background="#0F172A" CornerRadius="6" Padding="10" Margin="0,0,0,12" Visibility="Collapsed">
+                        <Border Grid.Row="5" x:Name="PanelLeftWebControls" Background="#0F172A" CornerRadius="6" Padding="10" Margin="0,0,0,10" Visibility="Collapsed">
                             <StackPanel>
                                 <TextBlock Text="🌐 WEB SİTESİ KONTROLLERİ (WEBSITE CONTROLS)" FontSize="11" FontWeight="Bold" Foreground="#38BDF8" Margin="0,0,0,8"/>
                                 <Grid Margin="0,0,0,8">
@@ -430,101 +446,118 @@
                         </Border>
 
                         <!-- Layout Adjustments (Scale / Zoom / Offsets) -->
-                        <Border Grid.Row="4" Background="#0F172A" CornerRadius="6" Padding="12" Margin="0,0,0,12">
+                        <Border Grid.Row="6" Background="#0F172A" CornerRadius="6" Padding="10" Margin="0,0,0,10">
                             <StackPanel>
-                                <TextBlock Text="DRAFT DÜZENLEME (LAYOUT ADJUSTMENTS)" FontSize="12" FontWeight="Bold" Foreground="#38BDF8" Margin="0,0,0,10"/>
+                                <TextBlock Text="SIRADAKİ KONUM &amp; ÖLÇEK (LAYOUT)" FontSize="11" FontWeight="Bold" Foreground="#38BDF8" Margin="0,0,0,8"/>
 
                                 <!-- Scale Mode -->
-                                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                                    <RadioButton x:Name="RadioLeftFit" Content="Fit" GroupName="LeftScale" IsChecked="True" Foreground="#F9FAFC" FontSize="13" Margin="0,0,12,0" Checked="RadioLeftScale_Checked"/>
-                                    <RadioButton x:Name="RadioLeftFill" Content="Fill" GroupName="LeftScale" Foreground="#F9FAFC" FontSize="13" Margin="0,0,12,0" Checked="RadioLeftScale_Checked"/>
-                                    <RadioButton x:Name="RadioLeftStretch" Content="Stretch" GroupName="LeftScale" Foreground="#F9FAFC" FontSize="13" Margin="0,0,12,0" Checked="RadioLeftScale_Checked"/>
-                                    <RadioButton x:Name="RadioLeftCustom" Content="Custom" GroupName="LeftScale" Foreground="#F9FAFC" FontSize="13" Checked="RadioLeftScale_Checked"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                    <RadioButton x:Name="RadioLeftFit" Content="Fit" GroupName="LeftScale" IsChecked="True" Foreground="#F9FAFC" FontSize="12" Margin="0,0,10,0" Checked="RadioLeftScale_Checked"/>
+                                    <RadioButton x:Name="RadioLeftFill" Content="Fill" GroupName="LeftScale" Foreground="#F9FAFC" FontSize="12" Margin="0,0,10,0" Checked="RadioLeftScale_Checked"/>
+                                    <RadioButton x:Name="RadioLeftStretch" Content="Stretch" GroupName="LeftScale" Foreground="#F9FAFC" FontSize="12" Margin="0,0,10,0" Checked="RadioLeftScale_Checked"/>
+                                    <RadioButton x:Name="RadioLeftCustom" Content="Custom" GroupName="LeftScale" Foreground="#F9FAFC" FontSize="12" Checked="RadioLeftScale_Checked"/>
                                 </StackPanel>
 
                                 <!-- Zoom Slider -->
-                                <Grid Margin="0,0,0,8">
+                                <Grid Margin="0,0,0,6">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="65"/>
+                                        <ColumnDefinition Width="55"/>
                                         <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="50"/>
+                                        <ColumnDefinition Width="45"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Text="Zoom:" FontSize="12" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Zoom:" FontSize="11" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
                                     <Slider Grid.Column="1" x:Name="SliderLeftZoom" Minimum="10" Maximum="400" Value="100" TickFrequency="5" IsSnapToTickEnabled="True" ValueChanged="SliderLeftLayout_ValueChanged"/>
-                                    <TextBlock Grid.Column="2" x:Name="TxtLeftZoom" Text="100%" FontSize="12" FontWeight="Bold" Foreground="#F9FAFC" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="2" x:Name="TxtLeftZoom" Text="100%" FontSize="11" FontWeight="Bold" Foreground="#F9FAFC" HorizontalAlignment="Right" VerticalAlignment="Center"/>
                                 </Grid>
 
                                 <!-- Offset X Slider -->
-                                <Grid Margin="0,0,0,8">
+                                <Grid Margin="0,0,0,6">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="65"/>
+                                        <ColumnDefinition Width="55"/>
                                         <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="50"/>
+                                        <ColumnDefinition Width="45"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Text="Offset X:" FontSize="12" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Offset X:" FontSize="11" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
                                     <Slider Grid.Column="1" x:Name="SliderLeftOffsetX" Minimum="-500" Maximum="500" Value="0" ValueChanged="SliderLeftLayout_ValueChanged"/>
-                                    <TextBlock Grid.Column="2" x:Name="TxtLeftOffsetX" Text="0 px" FontSize="12" FontWeight="Bold" Foreground="#F9FAFC" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="2" x:Name="TxtLeftOffsetX" Text="0 px" FontSize="11" FontWeight="Bold" Foreground="#F9FAFC" HorizontalAlignment="Right" VerticalAlignment="Center"/>
                                 </Grid>
 
                                 <!-- Offset Y Slider -->
-                                <Grid Margin="0,0,0,8">
+                                <Grid Margin="0,0,0,6">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="65"/>
+                                        <ColumnDefinition Width="55"/>
                                         <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="50"/>
+                                        <ColumnDefinition Width="45"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Text="Offset Y:" FontSize="12" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Offset Y:" FontSize="11" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
                                     <Slider Grid.Column="1" x:Name="SliderLeftOffsetY" Minimum="-500" Maximum="500" Value="0" ValueChanged="SliderLeftLayout_ValueChanged"/>
-                                    <TextBlock Grid.Column="2" x:Name="TxtLeftOffsetY" Text="0 px" FontSize="12" FontWeight="Bold" Foreground="#F9FAFC" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="2" x:Name="TxtLeftOffsetY" Text="0 px" FontSize="11" FontWeight="Bold" Foreground="#F9FAFC" HorizontalAlignment="Right" VerticalAlignment="Center"/>
                                 </Grid>
 
                                 <!-- Reset Layout Button -->
-                                <Button Content="↺ Konumu Sıfırla" Style="{StaticResource SecondaryBtnStyle}" Padding="8,4" FontSize="12" HorizontalAlignment="Right" Click="BtnLeftResetLayout_Click"/>
+                                <Button Content="↺ Konumu Sıfırla" Style="{StaticResource SecondaryBtnStyle}" Padding="6,3" FontSize="11" HorizontalAlignment="Right" Click="BtnLeftResetLayout_Click"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Content Bank / Quick Staging Presets -->
+                        <Border Grid.Row="7" Background="#0F172A" CornerRadius="6" Padding="10" Margin="0,0,0,10">
+                            <StackPanel>
+                                <Grid Margin="0,0,0,6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="📚 İÇERİKLER (HIZLI BANKA)" FontSize="11" FontWeight="Bold" Foreground="#38BDF8" VerticalAlignment="Center"/>
+                                    <Button Grid.Column="1" x:Name="BtnLeftAddToBank" Content="➕ Bankaya Ekle" Style="{StaticResource SecondaryBtnStyle}" Padding="6,3" FontSize="10" Click="BtnLeftAddToBank_Click"/>
+                                </Grid>
+                                <ScrollViewer MaxHeight="140" VerticalScrollBarVisibility="Auto">
+                                    <StackPanel x:Name="PanelLeftContentBankItems"/>
+                                </ScrollViewer>
                             </StackPanel>
                         </Border>
 
                         <!-- Actions & Apply Controls -->
-                        <StackPanel Grid.Row="5" Margin="0,0,0,12">
+                        <StackPanel Grid.Row="8" Margin="0,0,0,10">
                             <Grid Margin="0,0,0,8">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="10"/>
+                                    <ColumnDefinition Width="8"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
-                                <Button Grid.Column="0" x:Name="BtnLeftApply" Content="▶ UYGULA (APPLY TO LIVE)" Style="{StaticResource ApplyBtnStyle}" Click="BtnLeftApply_Click"/>
-                                <Button Grid.Column="2" x:Name="BtnLeftStop" Content="⏹ DURDUR (STOP)" Style="{StaticResource DangerBtnStyle}" Click="BtnLeftStop_Click"/>
+                                <Button Grid.Column="0" x:Name="BtnLeftApply" Content="🔴 UYGULA / YAYINA AL" Style="{StaticResource ApplyBtnStyle}" FontSize="13" Padding="8,10" Click="BtnLeftApply_Click"/>
+                                <Button Grid.Column="2" x:Name="BtnLeftStop" Content="⏹ DURDUR (STOP)" Style="{StaticResource DangerBtnStyle}" FontSize="11" Padding="6,10" Click="BtnLeftStop_Click"/>
                             </Grid>
-                            <Grid Margin="0,0,0,8">
+                            <Grid Margin="0,0,0,6">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="10"/>
                                     <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="8"/>
+                                    <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
-                                <Button Grid.Column="0" x:Name="BtnLeftBlack" Content="⚫ SİYAH (BLACK)" Style="{StaticResource WarningBtnStyle}" Click="BtnLeftBlack_Click"/>
-                                <CheckBox Grid.Column="2" x:Name="ChkLeftLiveSync" Content="Canlı Güncelle (Live Sync)" Foreground="{StaticResource TextSecondary}" FontSize="12" VerticalAlignment="Center" Checked="ChkLeftLiveSync_Changed" Unchecked="ChkLeftLiveSync_Changed"/>
+                                <Button Grid.Column="0" x:Name="BtnLeftBlack" Content="⚫ SİYAH (BLACK)" Style="{StaticResource WarningBtnStyle}" Padding="8,5" FontSize="11" Click="BtnLeftBlack_Click"/>
+                                <CheckBox Grid.Column="2" x:Name="ChkLeftLiveSync" Content="Canlı Konum/Ölçek Senkronu" Foreground="{StaticResource TextSecondary}" FontSize="11" VerticalAlignment="Center" ToolTip="Açık olduğunda yalnızca aynı yayındaki medyanın Zoom/Offset konumunu canlıya aktarır. Yeni medya seçimleri otomatik yayına geçmez." Checked="ChkLeftLiveSync_Changed" Unchecked="ChkLeftLiveSync_Changed"/>
                             </Grid>
-                            <TextBlock x:Name="TxtLeftError" Text="" Foreground="#F87171" FontSize="12" TextWrapping="Wrap" Visibility="Collapsed"/>
+                            <TextBlock x:Name="TxtLeftError" Text="" Foreground="#F87171" FontSize="11" TextWrapping="Wrap" Visibility="Collapsed"/>
                         </StackPanel>
 
                         <!-- Advanced Calibration Expander -->
-                        <Expander Grid.Row="6" Header="⚙️ GELİŞMİŞ KALİBRASYON (ADVANCED CALIBRATION)" Foreground="{StaticResource TextSecondary}" FontSize="12" FontWeight="SemiBold">
-                            <Border Background="#0F172A" CornerRadius="6" Padding="12" Margin="0,6,0,0">
+                        <Expander Grid.Row="9" Header="⚙️ GELİŞMİŞ KALİBRASYON (ADVANCED CALIBRATION)" Foreground="{StaticResource TextSecondary}" FontSize="11" FontWeight="SemiBold">
+                            <Border Background="#0F172A" CornerRadius="6" Padding="10" Margin="0,6,0,0">
                                 <StackPanel x:Name="PanelLeftCalibration">
-                                    <TextBlock Text="Logical LED Canvas (Physical Pixels):" FontSize="11" Foreground="{StaticResource TextSecondary}"/>
-                                    <StackPanel Orientation="Horizontal" Margin="0,4,0,8">
-                                        <TextBlock Text="Genişlik:" FontSize="11" Foreground="#F9FAFC" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                        <TextBox x:Name="TxtLeftLedW" Text="860" Width="55" LostFocus="TxtLeftCalibration_LostFocus"/>
-                                        <TextBlock Text="px  Yükseklik:" FontSize="11" Foreground="#F9FAFC" VerticalAlignment="Center" Margin="10,0,6,0"/>
-                                        <TextBox x:Name="TxtLeftLedH" Text="1720" Width="55" LostFocus="TxtLeftCalibration_LostFocus"/>
-                                        <TextBlock Text="px" FontSize="11" Foreground="#F9FAFC" VerticalAlignment="Center" Margin="4,0,0,0"/>
+                                    <TextBlock Text="Logical LED Canvas (Physical Pixels):" FontSize="10" Foreground="{StaticResource TextSecondary}"/>
+                                    <StackPanel Orientation="Horizontal" Margin="0,4,0,6">
+                                        <TextBlock Text="Genişlik:" FontSize="10" Foreground="#F9FAFC" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                        <TextBox x:Name="TxtLeftLedW" Text="860" Width="50" LostFocus="TxtLeftCalibration_LostFocus"/>
+                                        <TextBlock Text="px  Yükseklik:" FontSize="10" Foreground="#F9FAFC" VerticalAlignment="Center" Margin="8,0,4,0"/>
+                                        <TextBox x:Name="TxtLeftLedH" Text="1720" Width="50" LostFocus="TxtLeftCalibration_LostFocus"/>
+                                        <TextBlock Text="px" FontSize="10" Foreground="#F9FAFC" VerticalAlignment="Center" Margin="4,0,0,0"/>
                                     </StackPanel>
 
-                                    <TextBlock Text="GPU Viewport Offsets:" FontSize="11" Foreground="{StaticResource TextSecondary}"/>
+                                    <TextBlock Text="GPU Viewport Offsets:" FontSize="10" Foreground="{StaticResource TextSecondary}"/>
                                     <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                                        <TextBlock Text="X:" FontSize="11" Foreground="#F9FAFC" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                        <TextBox x:Name="TxtLeftVpX" Text="0" Width="50" LostFocus="TxtLeftCalibration_LostFocus"/>
-                                        <TextBlock Text="Y:" FontSize="11" Foreground="#F9FAFC" VerticalAlignment="Center" Margin="10,0,6,0"/>
-                                        <TextBox x:Name="TxtLeftVpY" Text="0" Width="50" LostFocus="TxtLeftCalibration_LostFocus"/>
+                                        <TextBlock Text="X:" FontSize="10" Foreground="#F9FAFC" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                        <TextBox x:Name="TxtLeftVpX" Text="0" Width="45" LostFocus="TxtLeftCalibration_LostFocus"/>
+                                        <TextBlock Text="Y:" FontSize="10" Foreground="#F9FAFC" VerticalAlignment="Center" Margin="8,0,4,0"/>
+                                        <TextBox x:Name="TxtLeftVpY" Text="0" Width="45" LostFocus="TxtLeftCalibration_LostFocus"/>
                                     </StackPanel>
                                 </StackPanel>
                             </Border>
@@ -540,7 +573,10 @@
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
                             <RowDefinition Height="180"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
@@ -548,59 +584,72 @@
                         </Grid.RowDefinitions>
 
                         <!-- Card Header -->
-                        <Grid Grid.Row="0" Margin="0,0,0,12">
+                        <Grid Grid.Row="0" Margin="0,0,0,8">
                             <TextBlock Text="RIGHT LED" FontSize="20" FontWeight="Bold" Foreground="#38BDF8"/>
                             <Border x:Name="BadgeRightStatus" HorizontalAlignment="Right" Background="#334155" CornerRadius="10" Padding="10,4">
                                 <TextBlock x:Name="TxtRightStatus" Text="INACTIVE" FontWeight="Bold" FontSize="12" Foreground="#CBD5E1"/>
                             </Border>
                         </Grid>
 
+                        <!-- Live Output Info Banner -->
+                        <Border Grid.Row="1" Background="#0F172A" BorderBrush="#10B981" BorderThickness="1" CornerRadius="6" Padding="8,5" Margin="0,0,0,10">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="🔴 YAYINDA: " FontWeight="Bold" FontSize="11" Foreground="#10B981" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="TxtRightLiveTitle" Text="[Yayın Kapalı]" FontWeight="SemiBold" FontSize="11" Foreground="#F9FAFC" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="320"/>
+                            </StackPanel>
+                        </Border>
+
                         <!-- Display Assignment Selector -->
-                        <StackPanel Grid.Row="1" Margin="0,0,0,12">
+                        <StackPanel Grid.Row="2" Margin="0,0,0,10">
                             <TextBlock Text="Hedef Ekran (Physical Output):" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,4"/>
                             <ComboBox x:Name="CmbRightDisplay" SelectionChanged="CmbRightDisplay_SelectionChanged"/>
                         </StackPanel>
 
-                        <!-- Interactive Draft Preview Zone -->
-                        <Border Grid.Row="2" x:Name="DropZoneRight" Background="#0F172A" BorderBrush="#475569" BorderThickness="2" CornerRadius="6"
-                                AllowDrop="True" DragOver="DropZone_DragOver" Drop="DropZoneRight_Drop" Margin="0,0,0,12">
-                            <Canvas x:Name="CanvasRightPreviewViewport" Background="#000000" ClipToBounds="True" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                <StackPanel x:Name="PanelRightDropPrompt" VerticalAlignment="Center" HorizontalAlignment="Center" Canvas.Left="35" Canvas.Top="50">
-                                    <TextBlock Text="🎬" FontSize="34" HorizontalAlignment="Center"/>
-                                    <TextBlock Text="Medya dosyasını (Görsel/Video) sürükleyin" FontWeight="Bold" FontSize="12" Foreground="{StaticResource TextPrimary}" HorizontalAlignment="Center"/>
-                                </StackPanel>
-                                <Border x:Name="PanelRightWebPreviewPrompt" Visibility="Collapsed" Background="#1E293B" BorderBrush="#38BDF8" BorderThickness="1" CornerRadius="6" Padding="8" Width="130" Height="160" Canvas.Left="5" Canvas.Top="5">
-                                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                                        <TextBlock Text="🌐" FontSize="30" HorizontalAlignment="Center" Margin="0,0,0,2"/>
-                                        <TextBlock Text="WEB SİTESİ DRAFT" FontWeight="ExtraBold" FontSize="10" Foreground="#38BDF8" HorizontalAlignment="Center" TextAlignment="Center"/>
-                                        <TextBlock x:Name="TxtRightWebPreviewHost" Text="subtitles.live.com" FontSize="10" FontWeight="Bold" Foreground="#F9FAFC" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" Margin="0,4,0,4"/>
-                                        <Border Background="#0EA5E9" CornerRadius="4" Padding="5,2" HorizontalAlignment="Center" Margin="0,2,0,0">
-                                            <TextBlock Text="YAYINA HAZIR" FontSize="9" FontWeight="Bold" Foreground="White"/>
-                                        </Border>
+                        <!-- Interactive Staged (SIRADAKİ) Preview Zone -->
+                        <Grid Grid.Row="3" Margin="0,0,0,10">
+                            <Border x:Name="DropZoneRight" Background="#0F172A" BorderBrush="#475569" BorderThickness="2" CornerRadius="6"
+                                    AllowDrop="True" DragOver="DropZone_DragOver" Drop="DropZoneRight_Drop">
+                                <Canvas x:Name="CanvasRightPreviewViewport" Background="#000000" ClipToBounds="True" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <StackPanel x:Name="PanelRightDropPrompt" VerticalAlignment="Center" HorizontalAlignment="Center" Canvas.Left="35" Canvas.Top="50">
+                                        <TextBlock Text="🎬" FontSize="34" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="Medya sürükleyin veya bankadan seçin" FontWeight="Bold" FontSize="12" Foreground="{StaticResource TextPrimary}" HorizontalAlignment="Center"/>
                                     </StackPanel>
-                                </Border>
-                                <Image x:Name="ImgRightPreview" Visibility="Collapsed" RenderTransformOrigin="0.5,0.5"/>
-                                <MediaElement x:Name="MediaRightPreviewVideo" Visibility="Collapsed" LoadedBehavior="Manual" UnloadedBehavior="Manual" IsMuted="True" Volume="0" MediaOpened="MediaRightPreviewVideo_MediaOpened"/>
-                            </Canvas>
-                        </Border>
+                                    <Border x:Name="PanelRightWebPreviewPrompt" Visibility="Collapsed" Background="#1E293B" BorderBrush="#38BDF8" BorderThickness="1" CornerRadius="6" Padding="8" Width="130" Height="160" Canvas.Left="5" Canvas.Top="5">
+                                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                                            <TextBlock Text="🌐" FontSize="30" HorizontalAlignment="Center" Margin="0,0,0,2"/>
+                                            <TextBlock Text="WEB SİTESİ SIRADAKİ" FontWeight="ExtraBold" FontSize="10" Foreground="#38BDF8" HorizontalAlignment="Center" TextAlignment="Center"/>
+                                            <TextBlock x:Name="TxtRightWebPreviewHost" Text="subtitles.live.com" FontSize="10" FontWeight="Bold" Foreground="#F9FAFC" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" Margin="0,4,0,4"/>
+                                            <Border Background="#0EA5E9" CornerRadius="4" Padding="5,2" HorizontalAlignment="Center" Margin="0,2,0,0">
+                                                <TextBlock Text="YAYINA HAZIR" FontSize="9" FontWeight="Bold" Foreground="White"/>
+                                            </Border>
+                                        </StackPanel>
+                                    </Border>
+                                    <Image x:Name="ImgRightPreview" Visibility="Collapsed" RenderTransformOrigin="0.5,0.5"/>
+                                    <MediaElement x:Name="MediaRightPreviewVideo" Visibility="Collapsed" LoadedBehavior="Manual" UnloadedBehavior="Manual" IsMuted="True" Volume="0" MediaOpened="MediaRightPreviewVideo_MediaOpened"/>
+                                </Canvas>
+                            </Border>
+                            <Border HorizontalAlignment="Left" VerticalAlignment="Top" Background="#F59E0B" CornerRadius="4" Padding="6,2" Margin="6,6,0,0">
+                                <TextBlock Text="🟡 SIRADAKİ (TASLAK)" FontSize="10" FontWeight="ExtraBold" Foreground="#0F172A"/>
+                            </Border>
+                        </Grid>
 
-                        <!-- Media Info & Actions -->
-                        <Grid Grid.Row="3" Margin="0,0,0,12">
+                        <!-- Media Info & Selection Actions -->
+                        <Grid Grid.Row="4" Margin="0,0,0,10">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock x:Name="TxtRightMediaPath" Text="(Medya seçilmedi)" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" Foreground="#F9FAFC" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="TxtRightMediaPath" Text="(Sıradaki medya seçilmedi)" FontSize="11" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" Foreground="#F9FAFC" VerticalAlignment="Center"/>
                             <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                <Button x:Name="BtnRightChooseMedia" Content="📂 MEDYA SEÇ" Style="{StaticResource SecondaryBtnStyle}" Padding="8,4" FontSize="11" Margin="4,0,0,0" Click="BtnRightChooseMedia_Click"/>
-                                <Button x:Name="BtnRightChooseWeb" Content="🌐 WEB SİTESİ" Style="{StaticResource SecondaryBtnStyle}" Padding="8,4" FontSize="11" Margin="4,0,0,0" Click="BtnRightChooseWeb_Click"/>
-                                <Button x:Name="BtnRightTestPattern" Content="🎯 TEST PATTERN" Style="{StaticResource SecondaryBtnStyle}" Padding="8,4" FontSize="11" Margin="4,0,0,0" Click="BtnRightTestPattern_Click"/>
-                                <Button x:Name="BtnRightRestoreMedia" Content="↺ Önceki Medya" Style="{StaticResource SecondaryBtnStyle}" Padding="6,4" FontSize="11" Margin="4,0,0,0" Visibility="Collapsed" Click="BtnRightRestoreMedia_Click"/>
+                                <Button x:Name="BtnRightChooseMedia" Content="📂 MEDYA" Style="{StaticResource SecondaryBtnStyle}" Padding="6,4" FontSize="10" Margin="3,0,0,0" Click="BtnRightChooseMedia_Click"/>
+                                <Button x:Name="BtnRightChooseWeb" Content="🌐 WEB" Style="{StaticResource SecondaryBtnStyle}" Padding="6,4" FontSize="10" Margin="3,0,0,0" Click="BtnRightChooseWeb_Click"/>
+                                <Button x:Name="BtnRightTestPattern" Content="🎯 PATTERN" Style="{StaticResource SecondaryBtnStyle}" Padding="6,4" FontSize="10" Margin="3,0,0,0" Click="BtnRightTestPattern_Click"/>
+                                <Button x:Name="BtnRightRestoreMedia" Content="↺ Önceki" Style="{StaticResource SecondaryBtnStyle}" Padding="5,4" FontSize="10" Margin="3,0,0,0" Visibility="Collapsed" Click="BtnRightRestoreMedia_Click"/>
                             </StackPanel>
                         </Grid>
 
                         <!-- Video Playback Controls Panel (Contextual) -->
-                        <Border x:Name="PanelRightVideoControls" Background="#0F172A" CornerRadius="6" Padding="10" Margin="0,0,0,12" Visibility="Collapsed">
+                        <Border Grid.Row="5" x:Name="PanelRightVideoControls" Background="#0F172A" CornerRadius="6" Padding="10" Margin="0,0,0,10" Visibility="Collapsed">
                             <StackPanel>
                                 <TextBlock Text="🎬 VİDEO KONTROLLERİ (VIDEO CONTROLS)" FontSize="11" FontWeight="Bold" Foreground="#38BDF8" Margin="0,0,0,8"/>
                                 <Grid Margin="0,0,0,8">
@@ -640,7 +689,7 @@
                         </Border>
 
                         <!-- Contextual Web Controls Panel -->
-                        <Border x:Name="PanelRightWebControls" Background="#0F172A" CornerRadius="6" Padding="10" Margin="0,0,0,12" Visibility="Collapsed">
+                        <Border Grid.Row="5" x:Name="PanelRightWebControls" Background="#0F172A" CornerRadius="6" Padding="10" Margin="0,0,0,10" Visibility="Collapsed">
                             <StackPanel>
                                 <TextBlock Text="🌐 WEB SİTESİ KONTROLLERİ (WEBSITE CONTROLS)" FontSize="11" FontWeight="Bold" Foreground="#38BDF8" Margin="0,0,0,8"/>
                                 <Grid Margin="0,0,0,8">
@@ -668,101 +717,118 @@
                         </Border>
 
                         <!-- Layout Adjustments (Scale / Zoom / Offsets) -->
-                        <Border Grid.Row="4" Background="#0F172A" CornerRadius="6" Padding="12" Margin="0,0,0,12">
+                        <Border Grid.Row="6" Background="#0F172A" CornerRadius="6" Padding="10" Margin="0,0,0,10">
                             <StackPanel>
-                                <TextBlock Text="DRAFT DÜZENLEME (LAYOUT ADJUSTMENTS)" FontSize="12" FontWeight="Bold" Foreground="#38BDF8" Margin="0,0,0,10"/>
+                                <TextBlock Text="SIRADAKİ KONUM &amp; ÖLÇEK (LAYOUT)" FontSize="11" FontWeight="Bold" Foreground="#38BDF8" Margin="0,0,0,8"/>
 
                                 <!-- Scale Mode -->
-                                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                                    <RadioButton x:Name="RadioRightFit" Content="Fit" GroupName="RightScale" IsChecked="True" Foreground="#F9FAFC" FontSize="13" Margin="0,0,12,0" Checked="RadioRightScale_Checked"/>
-                                    <RadioButton x:Name="RadioRightFill" Content="Fill" GroupName="RightScale" Foreground="#F9FAFC" FontSize="13" Margin="0,0,12,0" Checked="RadioRightScale_Checked"/>
-                                    <RadioButton x:Name="RadioRightStretch" Content="Stretch" GroupName="RightScale" Foreground="#F9FAFC" FontSize="13" Margin="0,0,12,0" Checked="RadioRightScale_Checked"/>
-                                    <RadioButton x:Name="RadioRightCustom" Content="Custom" GroupName="RightScale" Foreground="#F9FAFC" FontSize="13" Checked="RadioRightScale_Checked"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                    <RadioButton x:Name="RadioRightFit" Content="Fit" GroupName="RightScale" IsChecked="True" Foreground="#F9FAFC" FontSize="12" Margin="0,0,10,0" Checked="RadioRightScale_Checked"/>
+                                    <RadioButton x:Name="RadioRightFill" Content="Fill" GroupName="RightScale" Foreground="#F9FAFC" FontSize="12" Margin="0,0,10,0" Checked="RadioRightScale_Checked"/>
+                                    <RadioButton x:Name="RadioRightStretch" Content="Stretch" GroupName="RightScale" Foreground="#F9FAFC" FontSize="12" Margin="0,0,10,0" Checked="RadioRightScale_Checked"/>
+                                    <RadioButton x:Name="RadioRightCustom" Content="Custom" GroupName="RightScale" Foreground="#F9FAFC" FontSize="12" Checked="RadioRightScale_Checked"/>
                                 </StackPanel>
 
                                 <!-- Zoom Slider -->
-                                <Grid Margin="0,0,0,8">
+                                <Grid Margin="0,0,0,6">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="65"/>
+                                        <ColumnDefinition Width="55"/>
                                         <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="50"/>
+                                        <ColumnDefinition Width="45"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Text="Zoom:" FontSize="12" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Zoom:" FontSize="11" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
                                     <Slider Grid.Column="1" x:Name="SliderRightZoom" Minimum="10" Maximum="400" Value="100" TickFrequency="5" IsSnapToTickEnabled="True" ValueChanged="SliderRightLayout_ValueChanged"/>
-                                    <TextBlock Grid.Column="2" x:Name="TxtRightZoom" Text="100%" FontSize="12" FontWeight="Bold" Foreground="#F9FAFC" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="2" x:Name="TxtRightZoom" Text="100%" FontSize="11" FontWeight="Bold" Foreground="#F9FAFC" HorizontalAlignment="Right" VerticalAlignment="Center"/>
                                 </Grid>
 
                                 <!-- Offset X Slider -->
-                                <Grid Margin="0,0,0,8">
+                                <Grid Margin="0,0,0,6">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="65"/>
+                                        <ColumnDefinition Width="55"/>
                                         <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="50"/>
+                                        <ColumnDefinition Width="45"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Text="Offset X:" FontSize="12" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Offset X:" FontSize="11" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
                                     <Slider Grid.Column="1" x:Name="SliderRightOffsetX" Minimum="-500" Maximum="500" Value="0" ValueChanged="SliderRightLayout_ValueChanged"/>
-                                    <TextBlock Grid.Column="2" x:Name="TxtRightOffsetX" Text="0 px" FontSize="12" FontWeight="Bold" Foreground="#F9FAFC" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="2" x:Name="TxtRightOffsetX" Text="0 px" FontSize="11" FontWeight="Bold" Foreground="#F9FAFC" HorizontalAlignment="Right" VerticalAlignment="Center"/>
                                 </Grid>
 
                                 <!-- Offset Y Slider -->
-                                <Grid Margin="0,0,0,8">
+                                <Grid Margin="0,0,0,6">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="65"/>
+                                        <ColumnDefinition Width="55"/>
                                         <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="50"/>
+                                        <ColumnDefinition Width="45"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Text="Offset Y:" FontSize="12" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Offset Y:" FontSize="11" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
                                     <Slider Grid.Column="1" x:Name="SliderRightOffsetY" Minimum="-500" Maximum="500" Value="0" ValueChanged="SliderRightLayout_ValueChanged"/>
-                                    <TextBlock Grid.Column="2" x:Name="TxtRightOffsetY" Text="0 px" FontSize="12" FontWeight="Bold" Foreground="#F9FAFC" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="2" x:Name="TxtRightOffsetY" Text="0 px" FontSize="11" FontWeight="Bold" Foreground="#F9FAFC" HorizontalAlignment="Right" VerticalAlignment="Center"/>
                                 </Grid>
 
                                 <!-- Reset Layout Button -->
-                                <Button Content="↺ Konumu Sıfırla" Style="{StaticResource SecondaryBtnStyle}" Padding="8,4" FontSize="12" HorizontalAlignment="Right" Click="BtnRightResetLayout_Click"/>
+                                <Button Content="↺ Konumu Sıfırla" Style="{StaticResource SecondaryBtnStyle}" Padding="6,3" FontSize="11" HorizontalAlignment="Right" Click="BtnRightResetLayout_Click"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Content Bank / Quick Staging Presets -->
+                        <Border Grid.Row="7" Background="#0F172A" CornerRadius="6" Padding="10" Margin="0,0,0,10">
+                            <StackPanel>
+                                <Grid Margin="0,0,0,6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="📚 İÇERİKLER (HIZLI BANKA)" FontSize="11" FontWeight="Bold" Foreground="#38BDF8" VerticalAlignment="Center"/>
+                                    <Button Grid.Column="1" x:Name="BtnRightAddToBank" Content="➕ Bankaya Ekle" Style="{StaticResource SecondaryBtnStyle}" Padding="6,3" FontSize="10" Click="BtnRightAddToBank_Click"/>
+                                </Grid>
+                                <ScrollViewer MaxHeight="140" VerticalScrollBarVisibility="Auto">
+                                    <StackPanel x:Name="PanelRightContentBankItems"/>
+                                </ScrollViewer>
                             </StackPanel>
                         </Border>
 
                         <!-- Actions & Apply Controls -->
-                        <StackPanel Grid.Row="5" Margin="0,0,0,12">
+                        <StackPanel Grid.Row="8" Margin="0,0,0,10">
                             <Grid Margin="0,0,0,8">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="10"/>
+                                    <ColumnDefinition Width="8"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
-                                <Button Grid.Column="0" x:Name="BtnRightApply" Content="▶ UYGULA (APPLY TO LIVE)" Style="{StaticResource ApplyBtnStyle}" Click="BtnRightApply_Click"/>
-                                <Button Grid.Column="2" x:Name="BtnRightStop" Content="⏹ DURDUR (STOP)" Style="{StaticResource DangerBtnStyle}" Click="BtnRightStop_Click"/>
+                                <Button Grid.Column="0" x:Name="BtnRightApply" Content="🔴 UYGULA / YAYINA AL" Style="{StaticResource ApplyBtnStyle}" FontSize="13" Padding="8,10" Click="BtnRightApply_Click"/>
+                                <Button Grid.Column="2" x:Name="BtnRightStop" Content="⏹ DURDUR (STOP)" Style="{StaticResource DangerBtnStyle}" FontSize="11" Padding="6,10" Click="BtnRightStop_Click"/>
                             </Grid>
-                            <Grid Margin="0,0,0,8">
+                            <Grid Margin="0,0,0,6">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="10"/>
                                     <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="8"/>
+                                    <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
-                                <Button Grid.Column="0" x:Name="BtnRightBlack" Content="⚫ SİYAH (BLACK)" Style="{StaticResource WarningBtnStyle}" Click="BtnRightBlack_Click"/>
-                                <CheckBox Grid.Column="2" x:Name="ChkRightLiveSync" Content="Canlı Güncelle (Live Sync)" Foreground="{StaticResource TextSecondary}" FontSize="12" VerticalAlignment="Center" Checked="ChkRightLiveSync_Changed" Unchecked="ChkRightLiveSync_Changed"/>
+                                <Button Grid.Column="0" x:Name="BtnRightBlack" Content="⚫ SİYAH (BLACK)" Style="{StaticResource WarningBtnStyle}" Padding="8,5" FontSize="11" Click="BtnRightBlack_Click"/>
+                                <CheckBox Grid.Column="2" x:Name="ChkRightLiveSync" Content="Canlı Konum/Ölçek Senkronu" Foreground="{StaticResource TextSecondary}" FontSize="11" VerticalAlignment="Center" ToolTip="Açık olduğunda yalnızca aynı yayındaki medyanın Zoom/Offset konumunu canlıya aktarır. Yeni medya seçimleri otomatik yayına geçmez." Checked="ChkRightLiveSync_Changed" Unchecked="ChkRightLiveSync_Changed"/>
                             </Grid>
-                            <TextBlock x:Name="TxtRightError" Text="" Foreground="#F87171" FontSize="12" TextWrapping="Wrap" Visibility="Collapsed"/>
+                            <TextBlock x:Name="TxtRightError" Text="" Foreground="#F87171" FontSize="11" TextWrapping="Wrap" Visibility="Collapsed"/>
                         </StackPanel>
 
                         <!-- Advanced Calibration Expander -->
-                        <Expander Grid.Row="6" Header="⚙️ GELİŞMİŞ KALİBRASYON (ADVANCED CALIBRATION)" Foreground="{StaticResource TextSecondary}" FontSize="12" FontWeight="SemiBold">
-                            <Border Background="#0F172A" CornerRadius="6" Padding="12" Margin="0,6,0,0">
+                        <Expander Grid.Row="9" Header="⚙️ GELİŞMİŞ KALİBRASYON (ADVANCED CALIBRATION)" Foreground="{StaticResource TextSecondary}" FontSize="11" FontWeight="SemiBold">
+                            <Border Background="#0F172A" CornerRadius="6" Padding="10" Margin="0,6,0,0">
                                 <StackPanel x:Name="PanelRightCalibration">
-                                    <TextBlock Text="Logical LED Canvas (Physical Pixels):" FontSize="11" Foreground="{StaticResource TextSecondary}"/>
-                                    <StackPanel Orientation="Horizontal" Margin="0,4,0,8">
-                                        <TextBlock Text="Genişlik:" FontSize="11" Foreground="#F9FAFC" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                        <TextBox x:Name="TxtRightLedW" Text="860" Width="55" LostFocus="TxtRightCalibration_LostFocus"/>
-                                        <TextBlock Text="px  Yükseklik:" FontSize="11" Foreground="#F9FAFC" VerticalAlignment="Center" Margin="10,0,6,0"/>
-                                        <TextBox x:Name="TxtRightLedH" Text="1720" Width="55" LostFocus="TxtRightCalibration_LostFocus"/>
-                                        <TextBlock Text="px" FontSize="11" Foreground="#F9FAFC" VerticalAlignment="Center" Margin="4,0,0,0"/>
+                                    <TextBlock Text="Logical LED Canvas (Physical Pixels):" FontSize="10" Foreground="{StaticResource TextSecondary}"/>
+                                    <StackPanel Orientation="Horizontal" Margin="0,4,0,6">
+                                        <TextBlock Text="Genişlik:" FontSize="10" Foreground="#F9FAFC" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                        <TextBox x:Name="TxtRightLedW" Text="860" Width="50" LostFocus="TxtRightCalibration_LostFocus"/>
+                                        <TextBlock Text="px  Yükseklik:" FontSize="10" Foreground="#F9FAFC" VerticalAlignment="Center" Margin="8,0,4,0"/>
+                                        <TextBox x:Name="TxtRightLedH" Text="1720" Width="50" LostFocus="TxtRightCalibration_LostFocus"/>
+                                        <TextBlock Text="px" FontSize="10" Foreground="#F9FAFC" VerticalAlignment="Center" Margin="4,0,0,0"/>
                                     </StackPanel>
 
-                                    <TextBlock Text="GPU Viewport Offsets:" FontSize="11" Foreground="{StaticResource TextSecondary}"/>
+                                    <TextBlock Text="GPU Viewport Offsets:" FontSize="10" Foreground="{StaticResource TextSecondary}"/>
                                     <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                                        <TextBlock Text="X:" FontSize="11" Foreground="#F9FAFC" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                        <TextBox x:Name="TxtRightVpX" Text="0" Width="50" LostFocus="TxtRightCalibration_LostFocus"/>
-                                        <TextBlock Text="Y:" FontSize="11" Foreground="#F9FAFC" VerticalAlignment="Center" Margin="10,0,6,0"/>
-                                        <TextBox x:Name="TxtRightVpY" Text="0" Width="50" LostFocus="TxtRightCalibration_LostFocus"/>
+                                        <TextBlock Text="X:" FontSize="10" Foreground="#F9FAFC" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                        <TextBox x:Name="TxtRightVpX" Text="0" Width="45" LostFocus="TxtRightCalibration_LostFocus"/>
+                                        <TextBlock Text="Y:" FontSize="10" Foreground="#F9FAFC" VerticalAlignment="Center" Margin="8,0,4,0"/>
+                                        <TextBox x:Name="TxtRightVpY" Text="0" Width="45" LostFocus="TxtRightCalibration_LostFocus"/>
                                     </StackPanel>
                                 </StackPanel>
                             </Border>

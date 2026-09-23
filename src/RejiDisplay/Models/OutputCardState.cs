@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace RejiDisplay.Models
 {
     public class OutputCardState
@@ -20,6 +22,8 @@ namespace RejiDisplay.Models
         public ImageLayoutState DraftLayout { get; set; } = new();
         public ImageLayoutState LiveAppliedLayout { get; set; } = new();
 
+        public List<ContentBankItem> ContentBank { get; set; } = new();
+
         public string? PreviousMediaPath { get; set; }
 
         public bool IsLiveUpdateEnabled { get; set; } = false;
@@ -29,4 +33,3 @@ namespace RejiDisplay.Models
         public string ErrorText { get; set; } = string.Empty;
     }
 }
-
