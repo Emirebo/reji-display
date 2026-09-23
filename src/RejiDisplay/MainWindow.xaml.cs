@@ -937,6 +937,7 @@ namespace RejiDisplay
             {
                 var mediaSource = MediaSource.FromUrl(formattedUrl);
                 cardState.DraftLayout.MediaSource = mediaSource;
+                cardState.DraftLayout.MediaPath = formattedUrl;
                 cardState.DraftLayout.WebsiteState.Url = formattedUrl;
 
                 previewImg.Visibility = Visibility.Collapsed;
@@ -987,8 +988,7 @@ namespace RejiDisplay
             if (!string.IsNullOrWhiteSpace(filePath) &&
                 (filePath.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
                  filePath.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ||
-                 filePath.StartsWith("www.", StringComparison.OrdinalIgnoreCase) ||
-                 cardState.DraftLayout.MediaSource.Type == MediaSourceType.Website))
+                 filePath.StartsWith("www.", StringComparison.OrdinalIgnoreCase)))
             {
                 return LoadWebForCard(cardId, cardState, filePath);
             }
@@ -1004,6 +1004,12 @@ namespace RejiDisplay
             {
                 var mediaSource = MediaSource.FromFile(filePath);
                 cardState.DraftLayout.MediaSource = mediaSource;
+                cardState.DraftLayout.MediaPath = filePath;
+
+                var webPanel = (cardId == "LEFT") ? PanelLeftWebControls : PanelRightWebControls;
+                var webPreviewPrompt = (cardId == "LEFT") ? PanelLeftWebPreviewPrompt : PanelRightWebPreviewPrompt;
+                if (webPanel != null) webPanel.Visibility = Visibility.Collapsed;
+                if (webPreviewPrompt != null) webPreviewPrompt.Visibility = Visibility.Collapsed;
 
                 if (mediaSource.Type == MediaSourceType.Video)
                 {
