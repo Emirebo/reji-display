@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Threading.Tasks;
 using RejiDisplay.Models;
 using RejiDisplay.Services;
 using Xunit;
@@ -52,6 +53,37 @@ namespace RejiDisplay.Tests
                 Assert.Equal(@"\\.\DISPLAY4", loadedSettings.RightOutput.DeviceName);
                 Assert.Equal(ScaleMode.Stretch, loadedSettings.RightOutput.ScaleMode);
                 Assert.False(loadedSettings.RightOutput.IsBlackout);
+            }
+            finally
+            {
+                if (File.Exists(tempFile))
+                {
+                    File.Delete(tempFile);
+                }
+            }
+        }
+
+        [Fact]
+        public void SettingsService_FlushPendingSave_FlushesDebouncedSettingsImmediately()
+        {
+            string tempFile = Path.Combine(Path.GetTempPath(), $"reji_test_{Guid.NewGuid():N}.json");
+
+            try
+            {
+                var service = new SettingsService(tempFile);
+                var settings = new AppSettings
+                {
+                    ReservedCenterDeviceName = "DISPLAY_CENTER"
+                };
+
+                service.SaveSettingsDebounced(settings, 5000); // 5 sec delay
+                Assert.False(File.Exists(tempFile)); // File should not be created immediately
+
+                service.FlushPendingSave();
+                Assert.True(File.Exists(tempFile)); // File should exist after flush
+
+                var loaded = service.LoadSettings();
+                Assert.Equal("DISPLAY_CENTER", loaded.ReservedCenterDeviceName);
             }
             finally
             {

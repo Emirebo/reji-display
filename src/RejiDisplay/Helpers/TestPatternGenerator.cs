@@ -1,6 +1,7 @@
 using System;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -129,6 +130,44 @@ namespace RejiDisplay.Helpers
             }
 
             return tempPath;
+        }
+
+        /// <summary>
+        /// Safely cleans up stale test pattern temp files that are not currently in active use.
+        /// </summary>
+        public static void SafeCleanUpStalePatterns(params string?[] activePaths)
+        {
+            try
+            {
+                string tempDir = Path.Combine(Path.GetTempPath(), "RejiDisplay");
+                if (!Directory.Exists(tempDir)) return;
+
+                var activeSet = activePaths.Where(p => !string.IsNullOrEmpty(p)).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+                foreach (var file in Directory.GetFiles(tempDir, "TestPattern_*.png"))
+                {
+                    if (!activeSet.Contains(file))
+                    {
+                        try
+                        {
+                            // Only delete files older than 10 minutes to ensure safety
+                            var fi = new FileInfo(file);
+                            if (DateTime.Now - fi.LastWriteTime > TimeSpan.FromMinutes(10))
+                            {
+                                fi.Delete();
+                            }
+                        }
+                        catch
+                        {
+                            // Ignore locked files
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                // Ignore cleanup errors
+            }
         }
     }
 }

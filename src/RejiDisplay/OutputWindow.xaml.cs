@@ -5,8 +5,10 @@ using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using Microsoft.Web.WebView2.Core;
 using RejiDisplay.Helpers;
 using RejiDisplay.Models;
+using RejiDisplay.Services;
 
 namespace RejiDisplay
 {
@@ -16,6 +18,8 @@ namespace RejiDisplay
         private ImageLayoutState? _currentLayout;
         private OutputCalibration? _currentCalibration;
         private bool _isWebInitialized = false;
+        private int _webCrashRetryCount = 0;
+        private DateTime _lastCrashTime = DateTime.MinValue;
 
         public OutputWindow(DisplayInfo targetDisplay)
         {
@@ -109,8 +113,9 @@ namespace RejiDisplay
                     {
                         MediaVideo.Source = new Uri(targetPath, UriKind.Absolute);
                     }
-                    catch
+                    catch (Exception ex)
                     {
+                        AppLogger.LogError($"OutputWindow video yükleme hatası: {ex.Message}", ex);
                         MediaVideo.Visibility = Visibility.Collapsed;
                     }
                 }
@@ -182,13 +187,43 @@ namespace RejiDisplay
                         MediaWeb.CoreWebView2.IsMuted = true;
                         MediaWeb.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;
                         MediaWeb.CoreWebView2.Settings.IsStatusBarEnabled = false;
+                        MediaWeb.CoreWebView2.ProcessFailed += OnWebViewProcessFailed;
                     }
                     _isWebInitialized = true;
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"WebView2 initialization failed: {ex.Message}");
+                    AppLogger.LogError($"OutputWindow WebView2 başlatılamadı ({TargetDisplay?.FriendlyName}): {ex.Message}", ex);
                 }
+            }
+        }
+
+        private void OnWebViewProcessFailed(object? sender, CoreWebView2ProcessFailedEventArgs e)
+        {
+            AppLogger.LogError($"OutputWindow ({TargetDisplay?.FriendlyName}) WebView2 işlemi çöktü: {e.ProcessFailedKind}", null);
+
+            if ((DateTime.Now - _lastCrashTime).TotalSeconds > 60)
+            {
+                _webCrashRetryCount = 0;
+            }
+            _lastCrashTime = DateTime.Now;
+            _webCrashRetryCount++;
+
+            if (_webCrashRetryCount <= 3)
+            {
+                AppLogger.LogWarning($"WebView2 otomatik yeniden başlatma denemesi {_webCrashRetryCount}/3...");
+                try
+                {
+                    MediaWeb.Reload();
+                }
+                catch (Exception ex)
+                {
+                    AppLogger.LogError("WebView2 reload denemesi başarısız oldu.", ex);
+                }
+            }
+            else
+            {
+                AppLogger.LogError("WebView2 60 saniyede 3'ten fazla kez çöktü. Sonsuz döngüyü önlemek için otomatik yenileme durduruldu.", null);
             }
         }
 
@@ -212,7 +247,7 @@ namespace RejiDisplay
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"NavigateWebAsync error: {ex.Message}");
+                    AppLogger.LogError($"NavigateWebAsync yönlendirme hatası: {ex.Message}", ex);
                 }
             }
         }
@@ -277,6 +312,7 @@ namespace RejiDisplay
 
         private void MediaVideo_MediaFailed(object sender, ExceptionRoutedEventArgs e)
         {
+            AppLogger.LogError($"OutputWindow MediaElement oynatma hatası: {e.ErrorException?.Message}", e.ErrorException);
             MediaVideo.Visibility = Visibility.Collapsed;
         }
 
@@ -303,6 +339,10 @@ namespace RejiDisplay
 
                 if (MediaWeb != null)
                 {
+                    if (MediaWeb.CoreWebView2 != null)
+                    {
+                        MediaWeb.CoreWebView2.ProcessFailed -= OnWebViewProcessFailed;
+                    }
                     MediaWeb.Dispose();
                 }
             }

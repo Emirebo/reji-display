@@ -30,6 +30,7 @@ namespace RejiDisplay
         private bool _isInitializing = true;
         private bool _isUpdatingUI = false;
         private readonly System.Windows.Threading.DispatcherTimer _videoTimer;
+        private readonly Dictionary<string, BitmapImage> _bitmapCache = new(StringComparer.OrdinalIgnoreCase);
 
         public MainWindow()
         {
@@ -40,6 +41,17 @@ namespace RejiDisplay
             _venuePresetService = new VenuePresetService();
 
             InitializeComponent();
+
+            AppLogger.LogOccurred += (sender, args) =>
+            {
+                Dispatcher.InvokeAsync(() =>
+                {
+                    if (args.Level == LogLevel.Error && TxtGlobalStatus != null)
+                    {
+                        TxtGlobalStatus.Text = $"HATA: {args.Message}";
+                    }
+                });
+            };
 
             _videoTimer = new System.Windows.Threading.DispatcherTimer
             {
@@ -63,6 +75,7 @@ namespace RejiDisplay
                 PopulateVenuePresets();
                 RefreshDisplaysAndUI();
                 RestoreSavedSettings();
+                TestPatternGenerator.SafeCleanUpStalePatterns(_leftState.DraftLayout.MediaPath, _rightState.DraftLayout.MediaPath);
             }
             finally
             {
@@ -76,6 +89,7 @@ namespace RejiDisplay
 
         private void MainWindow_Unloaded(object sender, RoutedEventArgs e)
         {
+            _settingsService.FlushPendingSave();
             _outputManager.StopAllOutputs();
         }
 
@@ -1034,6 +1048,14 @@ namespace RejiDisplay
 
         private BitmapImage? CreateBitmap(string filePath)
         {
+            if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
+                return null;
+
+            if (_bitmapCache.TryGetValue(filePath, out var cached) && cached != null)
+            {
+                return cached;
+            }
+
             try
             {
                 var bitmap = new BitmapImage();
@@ -1042,10 +1064,12 @@ namespace RejiDisplay
                 bitmap.CacheOption = BitmapCacheOption.OnLoad;
                 bitmap.EndInit();
                 bitmap.Freeze();
+                _bitmapCache[filePath] = bitmap;
                 return bitmap;
             }
-            catch
+            catch (Exception ex)
             {
+                AppLogger.LogError($"Görsel yükleme hatası ({filePath}): {ex.Message}", ex);
                 return null;
             }
         }
@@ -1311,7 +1335,7 @@ namespace RejiDisplay
             if (_isInitializing || _isUpdatingUI || _settingsService == null || _appSettings == null) return;
 
             RenderDraftPreview(cardId);
-            SaveAppSettings();
+            SaveAppSettingsDebounced();
 
             var cardState = (cardId == "LEFT") ? _leftState : _rightState;
             if (cardState.IsLiveUpdateEnabled && _outputManager.IsOutputActive(cardId))
@@ -1624,6 +1648,25 @@ namespace RejiDisplay
             _appSettings.RightOutput.IsBlackout = _rightState.IsBlackout;
 
             _settingsService.SaveSettings(_appSettings);
+        }
+
+        private void SaveAppSettingsDebounced()
+        {
+            if (_isInitializing || _isUpdatingUI || _settingsService == null || _appSettings == null) return;
+
+            _appSettings.LeftOutput.Calibration = _leftState.DraftCalibration;
+            _appSettings.LeftOutput.DraftLayout = _leftState.DraftLayout;
+            _appSettings.LeftOutput.LiveAppliedLayout = _leftState.LiveAppliedLayout;
+            _appSettings.LeftOutput.IsLiveUpdateEnabled = _leftState.IsLiveUpdateEnabled;
+            _appSettings.LeftOutput.IsBlackout = _leftState.IsBlackout;
+
+            _appSettings.RightOutput.Calibration = _rightState.DraftCalibration;
+            _appSettings.RightOutput.DraftLayout = _rightState.DraftLayout;
+            _appSettings.RightOutput.LiveAppliedLayout = _rightState.LiveAppliedLayout;
+            _appSettings.RightOutput.IsLiveUpdateEnabled = _rightState.IsLiveUpdateEnabled;
+            _appSettings.RightOutput.IsBlackout = _rightState.IsBlackout;
+
+            _settingsService.SaveSettingsDebounced(_appSettings);
         }
 
         private void SetCardStatus(OutputCardState state, Border badge, TextBlock badgeTxt, string statusText, Color color)
