@@ -456,6 +456,7 @@ namespace RejiDisplay
             var previewVideo = (cardId == "LEFT") ? MediaLeftPreviewVideo : MediaRightPreviewVideo;
             var webPreviewPrompt = (cardId == "LEFT") ? PanelLeftWebPreviewPrompt : PanelRightWebPreviewPrompt;
             var webPreviewHostTxt = (cardId == "LEFT") ? TxtLeftWebPreviewHost : TxtRightWebPreviewHost;
+            var dropPromptPanel = (cardId == "LEFT") ? PanelLeftDropPrompt : PanelRightDropPrompt;
             var previewCanvas = (cardId == "LEFT") ? CanvasLeftPreviewViewport : CanvasRightPreviewViewport;
 
             if (previewCanvas == null) return;
@@ -483,8 +484,11 @@ namespace RejiDisplay
             previewCanvas.Width = viewportW;
             previewCanvas.Height = viewportH;
 
-            if (cardState.DraftLayout.MediaSource.Type == MediaSourceType.Website)
+            var mediaType = cardState.DraftLayout.MediaSource.Type;
+
+            if (mediaType == MediaSourceType.Website)
             {
+                if (dropPromptPanel != null) dropPromptPanel.Visibility = Visibility.Collapsed;
                 if (previewImg != null) previewImg.Visibility = Visibility.Collapsed;
                 if (previewVideo != null) previewVideo.Visibility = Visibility.Collapsed;
 
@@ -502,39 +506,78 @@ namespace RejiDisplay
                     }
                 }
             }
-            else if (cardState.DraftLayout.MediaSource.Type == MediaSourceType.Video && previewVideo != null && previewVideo.Visibility == Visibility.Visible)
+            else if (mediaType == MediaSourceType.Video)
             {
+                if (dropPromptPanel != null) dropPromptPanel.Visibility = Visibility.Collapsed;
                 if (webPreviewPrompt != null) webPreviewPrompt.Visibility = Visibility.Collapsed;
-                double vidW = previewVideo.NaturalVideoWidth > 0 ? previewVideo.NaturalVideoWidth : 1920;
-                double vidH = previewVideo.NaturalVideoHeight > 0 ? previewVideo.NaturalVideoHeight : 1080;
+                if (previewImg != null) previewImg.Visibility = Visibility.Collapsed;
 
-                var rect = LayoutTransformHelper.CalculateLayoutRect(
-                    vidW,
-                    vidH,
-                    viewportW,
-                    viewportH,
-                    cardState.DraftLayout);
+                if (previewVideo != null)
+                {
+                    previewVideo.Visibility = Visibility.Visible;
+                    double vidW = previewVideo.NaturalVideoWidth > 0 ? previewVideo.NaturalVideoWidth : 1920;
+                    double vidH = previewVideo.NaturalVideoHeight > 0 ? previewVideo.NaturalVideoHeight : 1080;
 
-                previewVideo.Width = rect.Width;
-                previewVideo.Height = rect.Height;
-                Canvas.SetLeft(previewVideo, rect.Left);
-                Canvas.SetTop(previewVideo, rect.Top);
+                    var rect = LayoutTransformHelper.CalculateLayoutRect(
+                        vidW,
+                        vidH,
+                        viewportW,
+                        viewportH,
+                        cardState.DraftLayout);
+
+                    previewVideo.Width = rect.Width;
+                    previewVideo.Height = rect.Height;
+                    Canvas.SetLeft(previewVideo, rect.Left);
+                    Canvas.SetTop(previewVideo, rect.Top);
+                }
             }
-            else if (previewImg != null && previewImg.Source is BitmapImage bitmap && bitmap.PixelWidth > 0 && bitmap.PixelHeight > 0)
+            else if (mediaType == MediaSourceType.Image || mediaType == MediaSourceType.TestPattern)
             {
+                if (dropPromptPanel != null) dropPromptPanel.Visibility = Visibility.Collapsed;
                 if (webPreviewPrompt != null) webPreviewPrompt.Visibility = Visibility.Collapsed;
-                var rect = LayoutTransformHelper.CalculateLayoutRect(
-                    bitmap.PixelWidth,
-                    bitmap.PixelHeight,
-                    viewportW,
-                    viewportH,
-                    cardState.DraftLayout);
+                if (previewVideo != null) previewVideo.Visibility = Visibility.Collapsed;
 
-                previewImg.Width = rect.Width;
-                previewImg.Height = rect.Height;
-                Canvas.SetLeft(previewImg, rect.Left);
-                Canvas.SetTop(previewImg, rect.Top);
-                previewImg.RenderTransform = Transform.Identity;
+                if (previewImg != null)
+                {
+                    if (previewImg.Source == null && !string.IsNullOrEmpty(cardState.DraftLayout.MediaPath))
+                    {
+                        if (cardState.DraftLayout.MediaPath.Contains("TestPattern_"))
+                        {
+                            previewImg.Source = TestPatternGenerator.GenerateTestPattern(
+                                cardState.Title,
+                                cardState.Calibration.LogicalLedWidth,
+                                cardState.Calibration.LogicalLedHeight);
+                        }
+                        else
+                        {
+                            previewImg.Source = CreateBitmap(cardState.DraftLayout.MediaPath);
+                        }
+                    }
+
+                    if (previewImg.Source is BitmapSource bitmap && bitmap.PixelWidth > 0 && bitmap.PixelHeight > 0)
+                    {
+                        previewImg.Visibility = Visibility.Visible;
+                        var rect = LayoutTransformHelper.CalculateLayoutRect(
+                            bitmap.PixelWidth,
+                            bitmap.PixelHeight,
+                            viewportW,
+                            viewportH,
+                            cardState.DraftLayout);
+
+                        previewImg.Width = rect.Width;
+                        previewImg.Height = rect.Height;
+                        Canvas.SetLeft(previewImg, rect.Left);
+                        Canvas.SetTop(previewImg, rect.Top);
+                        previewImg.RenderTransform = Transform.Identity;
+                    }
+                }
+            }
+            else
+            {
+                if (previewImg != null) previewImg.Visibility = Visibility.Collapsed;
+                if (previewVideo != null) previewVideo.Visibility = Visibility.Collapsed;
+                if (webPreviewPrompt != null) webPreviewPrompt.Visibility = Visibility.Collapsed;
+                if (dropPromptPanel != null) dropPromptPanel.Visibility = Visibility.Visible;
             }
         }
 
